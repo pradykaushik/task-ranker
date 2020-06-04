@@ -1,0 +1,5 @@
+prometheus_endpoint: http://localhost:9090
+strategy: cpushare_static
+filter_labels:
+  - electron_task_id
+  - electron_task_hostname
