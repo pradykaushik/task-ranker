@@ -15,15 +15,30 @@
 package taskranker
 
 import (
-	"github.com/mesos/mesos-go/api/v0/examples/Godeps/_workspace/src/github.com/stretchr/testify/assert"
+	"github.com/pradykaushik/task-ranker/entities"
+	"github.com/stretchr/testify/assert"
+	"log"
 	"testing"
 )
 
+type dummyTaskRankReceiver struct{}
+
+func (r *dummyTaskRankReceiver) Receive(rankedTasks []entities.Task) {
+	// placeholder
+	log.Println("len(rankedTasks) = ", len(rankedTasks))
+}
+
 func TestNew(t *testing.T) {
-	tRanker, err := New(WithConfigFile("config.yml"))
+	tRanker, err := New(
+		WithPrometheusEndpoint("http://localhost:9090"),
+		WithFilterLabelsZeroValues([]string{"label1", "label2"}),
+		WithStrategy("cpushares", &dummyTaskRankReceiver{}),
+		WithSchedule("?/5 * * * * *"))
+
 	assert.NoError(t, err)
 	assert.NotNil(t, tRanker)
 	assert.Equal(t, "http://localhost:9090", tRanker.PrometheusEndpoint)
-	assert.Equal(t, "cpushare_static", tRanker.Strategy)
+	assert.NotNil(t, tRanker.Strategy)
 	assert.Len(t, tRanker.FilterLabels, 2)
+	assert.Equal(t, "?/5 * * * * *", tRanker.Schedule)
 }

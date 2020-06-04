@@ -16,14 +16,15 @@ package taskranker
 
 import (
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
-	"os"
+	"github.com/pradykaushik/task-ranker/strategies"
+	"github.com/pradykaushik/task-ranker/strategies/factory"
 )
 
 type TaskRanker struct {
-	PrometheusEndpoint string   `yaml:"prometheus_endpoint"`
-	Strategy           string   `yaml:"strategy"`
-	FilterLabels       []string `yaml:"filter_labels"`
+	PrometheusEndpoint string
+	Strategy           strategies.Strategy
+	FilterLabels       []string
+	Schedule           string
 }
 
 func New(options ...Option) (*TaskRanker, error) {
@@ -36,36 +37,48 @@ func New(options ...Option) (*TaskRanker, error) {
 	return tRanker, nil
 }
 
-func (tRanker *TaskRanker) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type tempRanker struct {
-		PrometheusEndpoint string   `yaml:"prometheus_endpoint"`
-		Strategy           string   `yaml:"strategy"`
-		FilterLabels       []string `yaml:"filter_labels"`
-	}
-
-	t := new(tempRanker)
-	if err := unmarshal(t); err != nil {
-		return err
-	}
-	// Initializing members.
-	tRanker.PrometheusEndpoint = t.PrometheusEndpoint
-	tRanker.Strategy = t.Strategy
-	tRanker.FilterLabels = t.FilterLabels
-	return nil
-}
-
 type Option func(*TaskRanker) error
 
-func WithConfigFile(filename string) Option {
+func WithPrometheusEndpoint(promEndpoint string) Option {
 	return func(tRanker *TaskRanker) error {
-		file, err := os.Open(filename)
-		if err != nil {
-			return errors.Wrap(err, "failed to read config file")
+		if promEndpoint == "" {
+			return errors.New("invalid endpoint")
+		}
+		tRanker.PrometheusEndpoint = promEndpoint
+		return nil
+	}
+}
+
+func WithStrategy(strategy string, receiver strategies.TaskRanksReceiver) Option {
+	return func(tRanker *TaskRanker) error {
+		if strategy == "" {
+			return errors.New("invalid strategy")
 		}
 
-		err = yaml.NewDecoder(file).Decode(tRanker)
-		if err != nil {
-			return errors.Wrap(err, "failed to decode config file")
+		if s, err := factory.GetTaskRankStrategy(strategy); err != nil {
+			return err
+		} else {
+			tRanker.Strategy = s
+			strategies.Build(tRanker.Strategy, receiver)
+		}
+		return nil
+	}
+}
+
+func WithSchedule(schedule string) Option {
+	return func(tRanker *TaskRanker) error {
+		if schedule == "" {
+			return errors.New("invalid schedule")
+		}
+		tRanker.Schedule = schedule
+		return nil
+	}
+}
+
+func WithFilterLabelsZeroValues(labels []string) Option {
+	return func(tRanker *TaskRanker) error {
+		for _, l := range labels {
+			tRanker.FilterLabels = append(tRanker.FilterLabels, l)
 		}
 		return nil
 	}
