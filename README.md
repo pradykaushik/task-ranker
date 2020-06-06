@@ -2,7 +2,7 @@
 Rank tasks running as docker containers in a cluster.
 
 Task Ranker runs as a cron job on a specified schedule. Each time the task ranker is run,
-it fetches data from a metric monitoring system, filters the data as required and then
+it fetches data from [prometheus](https://prometheus.io/), filters the data as required and then
 submits it to a ranking strategy. The task ranking strategy uses the data received to
 calibrate currently running tasks on the cluster and then rank them accordingly. The results
 of the strategy are then fed back to the user through callbacks.
@@ -14,6 +14,13 @@ You will need to have a [working Golang environment running at least 1.12](https
 Then follow the below configuration and run instructions.
 
 #### Configure
+Task Ranker configuration requires two components to be configured and provided.
+1. DataFetcher - Responsible for fetching data from prometheus, filtering it
+    using the provided labels and submitting it to the chosen strategy.
+    - Endpoint - [Prometheus HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/) endpoint.
+    - Labels - Used for filtering the time series data using the specified [label matching operation](https://prometheus.io/docs/prometheus/latest/querying/basics/).
+2. Ranking Strategy - Uses the data to calibrate currently running tasks and then rank them accordingly.
+
 Task Ranker is configured as shown below.
 ```go
 type dummyTaskRankReceiver struct{}
@@ -24,7 +31,10 @@ func (r *dummyTaskRankReceiver) Receive(rankedTasks []entities.Task) {
 
 prometheusDataFetcher, err = prometheus.NewDataFetcher(
     prometheus.WithPrometheusEndpoint("http://localhost:9090"),
-    prometheus.WithFilterLabelsZeroValues([]string{"label1", "label2"}))
+    prometheus.WithLabelFilters([]prometheus.LabelMatchers{
+        {Label: "label1", MatchAs: prometheus.Equal},
+        {Label: "label2", MatchAs: prometheus.Equal},
+    }))
 
 tRanker, err = New(
     WithDataFetcher(prometheusDataFetcher),

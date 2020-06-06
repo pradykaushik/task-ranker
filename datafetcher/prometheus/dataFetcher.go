@@ -19,14 +19,34 @@ import (
 	"github.com/pradykaushik/task-ranker/datafetcher"
 )
 
-// DataFetcher implements datafetcher.Interface and is used to fetch data
+// DataFetcher implements datafetcher.Interface and is used to fetch time series data
 // from the given prometheus endpoint.
 type DataFetcher struct {
 	// The prometheus endpoint that is queried.
 	Endpoint string
-	// Labels used to filter the data fetched from prometheus.
-	Labels []string
+	// Labels used to filter the time series data fetched from prometheus.
+	// Labels []string
+	Labels []LabelMatchers
 }
+
+type LabelMatchers struct {
+	// Label name used to filter the time series data.
+	Label string
+	// Regex to use for label matching. This is required only when regex based label matching is used.
+	Regex string
+	// MatchAs is used to specify the operation to use when matching (=, !=, =~, !=~).
+	MatchAs LabelMatchOperation
+}
+
+// Label match operation to use when filtering time series data.
+type LabelMatchOperation int
+
+const (
+	Equal         LabelMatchOperation = iota // Equal translates to using '=' operator.
+	NotEqual                                 // NotEqual translates to using '!=' operator.
+	EqualRegex                               // EqualRegex translates to using '=~' operator.
+	NotEqualRegex                            // NotEqualRegex translates to using '!=~' operator.
+)
 
 type Option func(f *DataFetcher) error
 
@@ -50,9 +70,9 @@ func WithPrometheusEndpoint(endpoint string) Option {
 	}
 }
 
-func WithFilterLabelsZeroValues(labels []string) Option {
+func WithLabelFilters(labels []LabelMatchers) Option {
 	return func(f *DataFetcher) error {
-		f.Labels = append(f.Labels, labels...)
+		f.Labels = labels
 		return nil
 	}
 }

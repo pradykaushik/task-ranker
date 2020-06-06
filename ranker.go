@@ -23,9 +23,9 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-// TaskRanker fetches data pertaining to currently running tasks, deploys a strategy to rank
-// them and then feeds the results back to the caller.
-// TaskRanker runs as a cron job on the defined schedule.
+// TaskRanker fetches data pertaining to currently running tasks, deploys a strategy
+// to rank them and then feeds the results back to the caller.
+// Runs as a cron job on the defined schedule.
 type TaskRanker struct {
 	// DataFetcher used to pull task/container specific data.
 	DataFetcher df.Interface

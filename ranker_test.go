@@ -39,7 +39,10 @@ func initTaskRanker(t *testing.T) (*TaskRanker, error) {
 
 	prometheusDataFetcher, err = prometheus.NewDataFetcher(
 		prometheus.WithPrometheusEndpoint("http://localhost:9090"),
-		prometheus.WithFilterLabelsZeroValues([]string{"label1", "label2"}))
+		prometheus.WithLabelFilters([]prometheus.LabelMatchers{
+			{Label: "label1", MatchAs: prometheus.Equal},
+			{Label: "label2", MatchAs: prometheus.Equal},
+		}))
 	assert.NoError(t, err)
 	assert.NotNil(t, prometheusDataFetcher)
 
@@ -61,8 +64,10 @@ func TestNew(t *testing.T) {
 	assert.NotNil(t, tRanker.Strategy)
 	assert.Equal(t, "http://localhost:9090",
 		tRanker.DataFetcher.(*prometheus.DataFetcher).Endpoint)
-	assert.ElementsMatch(t, []string{"label1", "label2"},
-		tRanker.DataFetcher.(*prometheus.DataFetcher).Labels)
+	assert.ElementsMatch(t, []prometheus.LabelMatchers{
+		{Label: "label1", MatchAs: prometheus.Equal},
+		{Label: "label2", MatchAs: prometheus.Equal},
+	}, tRanker.DataFetcher.(*prometheus.DataFetcher).Labels)
 	parser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	var sched cron.Schedule
 	sched, err = parser.Parse("?/5 * * * * *")
@@ -77,7 +82,10 @@ func TestTaskRanker_Start(t *testing.T) {
 
 	prometheusDataFetcher, err = prometheus.NewDataFetcher(
 		prometheus.WithPrometheusEndpoint("http://localhost:9090"),
-		prometheus.WithFilterLabelsZeroValues([]string{"label1", "label2"}))
+		prometheus.WithLabelFilters([]prometheus.LabelMatchers{
+			{Label: "label1", MatchAs: prometheus.Equal},
+			{Label: "label2", MatchAs: prometheus.Equal},
+		}))
 	assert.NoError(t, err)
 	assert.NotNil(t, prometheusDataFetcher)
 
