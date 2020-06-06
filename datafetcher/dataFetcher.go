@@ -12,20 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package strategies
+package datafetcher
 
+// Interface defines an API for all data fetchers to implement.
 type Interface interface {
-	// SetTaskRanksReceiver registers a receiver of the task ranking results.
-	// This receiver is a callback and is used to pass the result of applying
-	// the strategy to rank tasks.
-	SetTaskRanksReceiver(TaskRanksReceiver)
-	// Execute the strategy.
-	// placeholder for parameter.
-	// TODO change parameter type once fetcher is pulling prometheus data.
-	Execute(string)
-}
-
-// Build the strategy object.
-func Build(s Interface, receiver TaskRanksReceiver) {
-	s.SetTaskRanksReceiver(receiver)
+	Fetch() string
 }

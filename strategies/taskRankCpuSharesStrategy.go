@@ -14,9 +14,7 @@
 
 package strategies
 
-import (
-	"log"
-)
+import "log"
 
 // TaskRankCpuSharesStrategy is a task ranking strategy that ranks the tasks
 // in non-increasing order based on the cpu-shares allocated to tasks.
@@ -29,8 +27,8 @@ func (s *TaskRankCpuSharesStrategy) SetTaskRanksReceiver(receiver TaskRanksRecei
 	s.receiver = receiver
 }
 
-func (s *TaskRankCpuSharesStrategy) Execute() {
+func (s *TaskRankCpuSharesStrategy) Execute(data string) {
 	// placeholder.
 	s.receiver.Receive(nil)
-	log.Println("cpu-share task ranking running...")
+	log.Println("from::cpushares_strategy " + data)
 }

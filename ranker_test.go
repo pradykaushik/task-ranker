@@ -15,10 +15,14 @@
 package taskranker
 
 import (
+	"github.com/pradykaushik/task-ranker/datafetcher"
+	"github.com/pradykaushik/task-ranker/datafetcher/prometheus"
 	"github.com/pradykaushik/task-ranker/entities"
+	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
+	"time"
 )
 
 type dummyTaskRankReceiver struct{}
@@ -28,17 +32,62 @@ func (r *dummyTaskRankReceiver) Receive(rankedTasks []entities.Task) {
 	log.Println("len(rankedTasks) = ", len(rankedTasks))
 }
 
-func TestNew(t *testing.T) {
-	tRanker, err := New(
-		WithPrometheusEndpoint("http://localhost:9090"),
-		WithFilterLabelsZeroValues([]string{"label1", "label2"}),
-		WithStrategy("cpushares", &dummyTaskRankReceiver{}),
-		WithSchedule("?/5 * * * * *"))
+func initTaskRanker(t *testing.T) (*TaskRanker, error) {
+	var err error
+	var prometheusDataFetcher datafetcher.Interface
+	var tRanker *TaskRanker
 
+	prometheusDataFetcher, err = prometheus.NewDataFetcher(
+		prometheus.WithPrometheusEndpoint("http://localhost:9090"),
+		prometheus.WithFilterLabelsZeroValues([]string{"label1", "label2"}))
+	assert.NoError(t, err)
+	assert.NotNil(t, prometheusDataFetcher)
+
+	tRanker, err = New(
+		WithDataFetcher(prometheusDataFetcher),
+		WithSchedule("?/5 * * * * *"),
+		WithStrategy("cpushares", &dummyTaskRankReceiver{}))
+
+	return tRanker, err
+}
+
+func TestNew(t *testing.T) {
+	var err error
+	var tRanker *TaskRanker
+	tRanker, err = initTaskRanker(t)
 	assert.NoError(t, err)
 	assert.NotNil(t, tRanker)
-	assert.Equal(t, "http://localhost:9090", tRanker.PrometheusEndpoint)
+	assert.NotNil(t, tRanker.DataFetcher)
 	assert.NotNil(t, tRanker.Strategy)
-	assert.Len(t, tRanker.FilterLabels, 2)
-	assert.Equal(t, "?/5 * * * * *", tRanker.Schedule)
+	assert.Equal(t, "http://localhost:9090",
+		tRanker.DataFetcher.(*prometheus.DataFetcher).Endpoint)
+	assert.ElementsMatch(t, []string{"label1", "label2"},
+		tRanker.DataFetcher.(*prometheus.DataFetcher).Labels)
+	parser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	var sched cron.Schedule
+	sched, err = parser.Parse("?/5 * * * * *")
+	assert.NoError(t, err)
+	assert.Equal(t, sched, tRanker.Schedule)
+}
+
+func TestTaskRanker_Start(t *testing.T) {
+	var err error
+	var prometheusDataFetcher datafetcher.Interface
+	var tRanker *TaskRanker
+
+	prometheusDataFetcher, err = prometheus.NewDataFetcher(
+		prometheus.WithPrometheusEndpoint("http://localhost:9090"),
+		prometheus.WithFilterLabelsZeroValues([]string{"label1", "label2"}))
+	assert.NoError(t, err)
+	assert.NotNil(t, prometheusDataFetcher)
+
+	tRanker, err = New(
+		WithDataFetcher(prometheusDataFetcher),
+		WithSchedule("?/1 * * * * *"),
+		WithStrategy("cpushares", &dummyTaskRankReceiver{}))
+	assert.NoError(t, err)
+	tRanker.Start()
+
+	<-time.After(5 * time.Second)
+	tRanker.Stop()
 }

@@ -16,6 +16,7 @@ package strategies
 
 import "github.com/pradykaushik/task-ranker/entities"
 
+// TaskRanksReceiver defines an API to be implemented by all receivers of task ranking results.
 type TaskRanksReceiver interface {
 	// Receive the ranked tasks and their corresponding information.
 	// Task at position i is ranked higher than task at position i+1.
