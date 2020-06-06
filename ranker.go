@@ -30,7 +30,7 @@ type TaskRanker struct {
 	// DataFetcher used to pull task/container specific data.
 	DataFetcher df.Interface
 	// Strategy to use for calibration and ranking of tasks using the data fetched.
-	Strategy    strategies.Interface
+	Strategy strategies.Interface
 	// Schedule on which the ranker runs. The schedule should follow the cron schedule format.
 	// See https://en.wikipedia.org/wiki/Cron.
 	// Alternatively, Seconds can also be specified as part of the schedule.
