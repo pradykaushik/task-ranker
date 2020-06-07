@@ -26,16 +26,18 @@ func TestMain(m *testing.M) {
 		WithMetric("test_metric"),
 		WithLabelMatchers(
 			&LabelMatcher{
-				Label:    "test_label2",
+				Label:    "test_label1",
 				Operator: Equal,
 				Value:    "test_value1",
 			},
 			&LabelMatcher{
-				Label:    "test_label1",
+				Label:    "test_label2",
 				Operator: Equal,
 				Value:    "test_value2",
 			}),
 		WithRange(Seconds, 5))
+
+	m.Run()
 }
 
 func TestGetBuilder(t *testing.T) {
