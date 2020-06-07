@@ -14,12 +14,18 @@
 
 package strategies
 
-import "log"
+import (
+	"github.com/pradykaushik/task-ranker/query"
+	"log"
+)
 
 // TaskRankCpuSharesStrategy is a task ranking strategy that ranks the tasks
 // in non-increasing order based on the cpu-shares allocated to tasks.
 type TaskRankCpuSharesStrategy struct {
+	// receiver of the results of task ranking.
 	receiver TaskRanksReceiver
+	// labels used to filter the time series data fetched from prometheus.
+	labels []*query.LabelMatcher
 }
 
 // SetTaskRanksReceiver sets the receiver of the results of task ranking.
@@ -27,8 +33,30 @@ func (s *TaskRankCpuSharesStrategy) SetTaskRanksReceiver(receiver TaskRanksRecei
 	s.receiver = receiver
 }
 
+// Execute the strategy using the provided data.
 func (s *TaskRankCpuSharesStrategy) Execute(data string) {
 	// placeholder.
 	s.receiver.Receive(nil)
-	log.Println("from::cpushares_strategy " + data)
+	log.Println("from::cpushares_strategy with query string::" + data)
+}
+
+// GetMetric returns the name of the metric to query.
+func (s TaskRankCpuSharesStrategy) GetMetric() string {
+	// TODO convert this to constant.
+	return "container_spec_cpu_shares"
+}
+
+// SetLabelMatchers sets the label matchers to use to filter data.
+func (s *TaskRankCpuSharesStrategy) SetLabelMatchers(labelMatchers []*query.LabelMatcher) {
+	s.labels = labelMatchers
+}
+
+// GetLabelMatchers returns the label matchers to be used to filter data.
+func (s TaskRankCpuSharesStrategy) GetLabelMatchers() []*query.LabelMatcher {
+	return s.labels
+}
+
+// GetRange returns the time unit and duration for how far back values need to be fetched.
+func (s TaskRankCpuSharesStrategy) GetRange() (query.TimeUnit, int) {
+	return query.Seconds, 5
 }

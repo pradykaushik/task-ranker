@@ -14,7 +14,11 @@
 
 package datafetcher
 
+import "github.com/pradykaushik/task-ranker/strategies"
+
 // Interface defines an API for all data fetchers to implement.
 type Interface interface {
 	Fetch() string
+	SetStrategy(strategies.Interface)
+	GetEndpoint() string
 }

@@ -17,6 +17,7 @@ package taskranker
 import (
 	"github.com/pkg/errors"
 	df "github.com/pradykaushik/task-ranker/datafetcher"
+	"github.com/pradykaushik/task-ranker/query"
 	"github.com/pradykaushik/task-ranker/strategies"
 	"github.com/pradykaushik/task-ranker/strategies/factory"
 	"github.com/pradykaushik/task-ranker/util"
@@ -65,17 +66,23 @@ func WithDataFetcher(dataFetcher df.Interface) Option {
 	}
 }
 
-func WithStrategy(strategy string, receiver strategies.TaskRanksReceiver) Option {
+func WithStrategy(
+	strategy string,
+	labelMatchers []*query.LabelMatcher,
+	receiver strategies.TaskRanksReceiver) Option {
+
 	return func(tRanker *TaskRanker) error {
 		if strategy == "" {
 			return errors.New("invalid strategy")
 		}
 
+		// TODO validate arguments.
 		if s, err := factory.GetTaskRankStrategy(strategy); err != nil {
 			return err
 		} else {
 			tRanker.Strategy = s
-			strategies.Build(tRanker.Strategy, receiver)
+			strategies.Build(tRanker.Strategy, labelMatchers, receiver)
+			tRanker.DataFetcher.SetStrategy(s)
 		}
 		return nil
 	}

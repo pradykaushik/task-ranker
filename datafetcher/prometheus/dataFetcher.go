@@ -17,39 +17,25 @@ package prometheus
 import (
 	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/datafetcher"
+	"github.com/pradykaushik/task-ranker/query"
+	"github.com/pradykaushik/task-ranker/strategies"
 )
 
 // DataFetcher implements datafetcher.Interface and is used to fetch time series data
 // from the given prometheus endpoint.
 type DataFetcher struct {
-	// The prometheus endpoint that is queried.
-	Endpoint string
-	// Labels used to filter the time series data fetched from prometheus.
-	// Labels []string
-	Labels []LabelMatchers
+	// endpoint of the prometheus HTTP server.
+	endpoint string
+	// The strategy that is to be applied on the fetched data.
+	// DataFetcher uses the strategy to obtain basic information about the query such as
+	// metric name, labels for filtering, match operation to perform etc.
+	strategy strategies.Interface
 }
-
-type LabelMatchers struct {
-	// Label name used to filter the time series data.
-	Label string
-	// Regex to use for label matching. This is required only when regex based label matching is used.
-	Regex string
-	// MatchAs is used to specify the operation to use when matching (=, !=, =~, !=~).
-	MatchAs LabelMatchOperation
-}
-
-// Label match operation to use when filtering time series data.
-type LabelMatchOperation int
-
-const (
-	Equal         LabelMatchOperation = iota // Equal translates to using '=' operator.
-	NotEqual                                 // NotEqual translates to using '!=' operator.
-	EqualRegex                               // EqualRegex translates to using '=~' operator.
-	NotEqualRegex                            // NotEqualRegex translates to using '!=~' operator.
-)
 
 type Option func(f *DataFetcher) error
 
+// NewDataFetcher constructs a DataFetcher instance by applying all the provided options.
+// Returns error if any one of the options fails.
 func NewDataFetcher(options ...Option) (datafetcher.Interface, error) {
 	f := new(DataFetcher)
 	for _, opt := range options {
@@ -60,23 +46,36 @@ func NewDataFetcher(options ...Option) (datafetcher.Interface, error) {
 	return f, nil
 }
 
+// WithPrometheusEndpoint returns an option that initializes the prometheus HTTP server endpoint.
 func WithPrometheusEndpoint(endpoint string) Option {
 	return func(f *DataFetcher) error {
 		if endpoint == "" {
 			return errors.New("invalid endpoint")
 		}
-		f.Endpoint = endpoint
+		f.endpoint = endpoint
 		return nil
 	}
 }
 
-func WithLabelFilters(labels []LabelMatchers) Option {
-	return func(f *DataFetcher) error {
-		f.Labels = labels
-		return nil
-	}
+// SetStrategy sets the task ranking strategy.
+func (f *DataFetcher) SetStrategy(s strategies.Interface) {
+	f.strategy = s
 }
 
+// GetEndpoint returns the prometheus HTTP server endpoint.
+func (f *DataFetcher) GetEndpoint() string {
+	return f.endpoint
+}
+
+// Fetch the data from prometheus, filter it using the provided labels, matching operations
+// and corresponding values and return the result.
 func (f *DataFetcher) Fetch() string {
-	return "from::fetcher data from prometheus"
+	queryBuilder := query.GetBuilder(
+		query.WithMetric(f.strategy.GetMetric()),
+		query.WithLabelMatchers(f.strategy.GetLabelMatchers()...),
+		query.WithRange(f.strategy.GetRange()))
+	queryString := queryBuilder.BuildQuery()
+	// temporarily returning queryString.
+	// TODO (pkaushi1) query the prometheus endpoint and return model.Value.
+	return queryString
 }

@@ -17,9 +17,10 @@ Then follow the below configuration and run instructions.
 Task Ranker configuration requires two components to be configured and provided.
 1. DataFetcher - Responsible for fetching data from prometheus, filtering it
     using the provided labels and submitting it to the chosen strategy.
-    - Endpoint - [Prometheus HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/) endpoint.
-    - Labels - Used for filtering the time series data using the specified [label matching operation](https://prometheus.io/docs/prometheus/latest/querying/basics/).
+    - Endpoint: [Prometheus HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/) endpoint.
 2. Ranking Strategy - Uses the data to calibrate currently running tasks and then rank them accordingly.
+    - Labels: Used for filtering the time series data using the specified [label matching operation](https://prometheus.io/docs/prometheus/latest/querying/basics/).
+    - Receiver of the task ranking results.
 
 Task Ranker is configured as shown below.
 ```go
@@ -30,16 +31,15 @@ func (r *dummyTaskRankReceiver) Receive(rankedTasks []entities.Task) {
 }
 
 prometheusDataFetcher, err = prometheus.NewDataFetcher(
-    prometheus.WithPrometheusEndpoint("http://localhost:9090"),
-    prometheus.WithLabelFilters([]prometheus.LabelMatchers{
-        {Label: "label1", MatchAs: prometheus.Equal},
-        {Label: "label2", MatchAs: prometheus.Equal},
-    }))
+    prometheus.WithPrometheusEndpoint("http://localhost:9090"))
 
 tRanker, err = New(
     WithDataFetcher(prometheusDataFetcher),
     WithSchedule("?/5 * * * * *"),
-    WithStrategy("cpushares", &dummyTaskRankReceiver{}))
+    WithStrategy("cpushares", []*query.LabelMatcher{
+        {Label: "label1", Operator: query.Equal},
+        {Label: "label2", Operator: query.Equal},
+    }, &dummyTaskRankReceiver{}))
 ```
 
 #### Start the Task Ranker
