@@ -47,8 +47,8 @@ tRanker, err = New(
     WithDataFetcher(prometheusDataFetcher),
     WithSchedule("?/5 * * * * *"),
     WithStrategy("cpushares", []*query.LabelMatcher{
-        {Label: "label1", Operator: query.Equal},
-        {Label: "label2", Operator: query.Equal},
+        {Label: "label1", Operator: query.NotEqual, Value: ""},
+        {Label: "label2", Operator: query.NotEqual, Value: ""},
     }, &dummyTaskRankReceiver{}))
 ```
 
