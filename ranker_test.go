@@ -15,6 +15,8 @@
 package taskranker
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/pradykaushik/task-ranker/datafetcher"
 	"github.com/pradykaushik/task-ranker/datafetcher/prometheus"
 	"github.com/pradykaushik/task-ranker/entities"
@@ -29,9 +31,12 @@ import (
 
 type dummyTaskRankReceiver struct{}
 
-func (r *dummyTaskRankReceiver) Receive(rankedTasks []entities.Task) {
-	// placeholder
-	log.Println("len(rankedTasks) = ", len(rankedTasks))
+func (r *dummyTaskRankReceiver) Receive(rankedTasks []entities.RankedTask) {
+	var buf bytes.Buffer
+	for _, t := range rankedTasks {
+		buf.WriteString(fmt.Sprintf("%v\n", t.String()))
+	}
+	log.Println(buf.String())
 }
 
 func initTaskRanker(t *testing.T) (*TaskRanker, error) {
@@ -77,6 +82,7 @@ func TestNew(t *testing.T) {
 	assert.Equal(t, sched, tRanker.Schedule)
 }
 
+// Test the cpushares task ranking strategy by fetching data from a local prometheus + cAdvisor setup.
 func TestTaskRanker_Start(t *testing.T) {
 	var err error
 	var prometheusDataFetcher datafetcher.Interface
@@ -91,12 +97,11 @@ func TestTaskRanker_Start(t *testing.T) {
 		WithDataFetcher(prometheusDataFetcher),
 		WithSchedule("?/5 * * * * *"),
 		WithStrategy("cpushares", []*query.LabelMatcher{
-			{Label: "label1", Operator: query.Equal},
-			{Label: "label2", Operator: query.Equal},
+			{Label: "container_label_task_name", Operator: query.EqualRegex, Value: "test_task_.*"},
 		}, &dummyTaskRankReceiver{}))
 	assert.NoError(t, err)
 	tRanker.Start()
 
-	<-time.After(5 * time.Second)
+	<-time.After(10 * time.Second)
 	tRanker.Stop()
 }

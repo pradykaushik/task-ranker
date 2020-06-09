@@ -22,6 +22,7 @@ import (
 	"github.com/pradykaushik/task-ranker/strategies/factory"
 	"github.com/pradykaushik/task-ranker/util"
 	"github.com/robfig/cron/v3"
+	"log"
 )
 
 // TaskRanker fetches data pertaining to currently running tasks, deploys a strategy
@@ -110,7 +111,12 @@ func (tRanker *TaskRanker) Run() {
 	if tRanker.termCh.IsClosed() {
 		return
 	}
-	tRanker.Strategy.Execute(tRanker.DataFetcher.Fetch())
+	result, err := tRanker.DataFetcher.Fetch()
+	if err != nil {
+		log.Println(err.Error())
+	} else {
+		tRanker.Strategy.Execute(result)
+	}
 }
 
 func (tRanker *TaskRanker) Stop() {

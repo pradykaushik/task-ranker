@@ -14,11 +14,30 @@
 
 package entities
 
-type Task struct {
-	// CpuShares allocated to the task.
-	CpuShares float64
-	// Memory allocated to the task.
-	RAM float64
-	// Labels assigned to the docker container inside which the task is running.
-	Labels map[string]string
+import (
+	"bytes"
+	"fmt"
+	"github.com/prometheus/common/model"
+)
+
+type RankedTask struct {
+	Metric model.Metric
+	Weight float64
+}
+
+// GetMetric returns the metric as returned by the query.
+func (t RankedTask) GetMetric() model.Metric {
+	return t.Metric
+}
+
+// GetWeight returns the weight assigned to the task as a result of calibration.
+func (t RankedTask) GetWeight() float64 {
+	return t.Weight
+}
+
+func (t RankedTask) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("Metric: %v\n", t.Metric))
+	buf.WriteString(fmt.Sprintf("Weight: %f\n", t.Weight))
+	return buf.String()
 }

@@ -14,11 +14,14 @@
 
 package datafetcher
 
-import "github.com/pradykaushik/task-ranker/strategies"
+import (
+	"github.com/pradykaushik/task-ranker/strategies"
+	"github.com/prometheus/common/model"
+)
 
 // Interface defines an API for all data fetchers to implement.
 type Interface interface {
-	Fetch() string
+	Fetch() (model.Value, error)
 	SetStrategy(strategies.Interface)
 	GetEndpoint() string
 }

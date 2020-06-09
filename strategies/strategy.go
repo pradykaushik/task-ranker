@@ -16,6 +16,7 @@ package strategies
 
 import (
 	"github.com/pradykaushik/task-ranker/query"
+	"github.com/prometheus/common/model"
 )
 
 type Interface interface {
@@ -24,8 +25,7 @@ type Interface interface {
 	// the strategy to rank tasks.
 	SetTaskRanksReceiver(TaskRanksReceiver)
 	// Execute the strategy.
-	// placeholder for type.
-	Execute(string)
+	Execute(model.Value)
 	// GetMetric returns the metric to pull data for.
 	// Note: This has to be a single metric name.
 	GetMetric() string

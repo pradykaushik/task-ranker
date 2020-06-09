@@ -15,10 +15,15 @@
 package prometheus
 
 import (
+	"context"
 	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/datafetcher"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/pradykaushik/task-ranker/strategies"
+	"github.com/prometheus/client_golang/api"
+	"github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
+	"time"
 )
 
 // DataFetcher implements datafetcher.Interface and is used to fetch time series data
@@ -69,13 +74,25 @@ func (f *DataFetcher) GetEndpoint() string {
 
 // Fetch the data from prometheus, filter it using the provided labels, matching operations
 // and corresponding values and return the result.
-func (f *DataFetcher) Fetch() string {
+// Time series is fetched using the v1 API. Note that v1 API is still in experimental stage and
+// therefore we need to watch out for compatibility issues.
+func (f *DataFetcher) Fetch() (result model.Value, err error) {
 	queryBuilder := query.GetBuilder(
 		query.WithMetric(f.strategy.GetMetric()),
 		query.WithLabelMatchers(f.strategy.GetLabelMatchers()...),
 		query.WithRange(f.strategy.GetRange()))
 	queryString := queryBuilder.BuildQuery()
-	// temporarily returning queryString.
-	// TODO (pkaushi1) query the prometheus endpoint and return model.Value.
-	return queryString
+	// Following examples from here - https://github.com/prometheus/client_golang/blob/master/api/prometheus/v1/example_test.go.
+	var client api.Client
+	client, err = api.NewClient(api.Config{Address: f.endpoint})
+	if err != nil {
+		err = errors.Wrap(err, "failed to fetch data from prometheus")
+		return
+	}
+	v1Api := v1.NewAPI(client)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	// TODO do not ignore warnings. maybe log them?
+	result, _, err = v1Api.Query(ctx, queryString, time.Now())
+	return
 }
