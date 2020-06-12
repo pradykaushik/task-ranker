@@ -16,15 +16,32 @@ package taskranker
 
 import (
 	"github.com/pkg/errors"
+	df "github.com/pradykaushik/task-ranker/datafetcher"
+	"github.com/pradykaushik/task-ranker/query"
 	"github.com/pradykaushik/task-ranker/strategies"
 	"github.com/pradykaushik/task-ranker/strategies/factory"
+	"github.com/pradykaushik/task-ranker/util"
+	"github.com/robfig/cron/v3"
+	"log"
 )
 
+// TaskRanker fetches data pertaining to currently running tasks, deploys a strategy
+// to rank them and then feeds the results back to the caller.
+// Runs as a cron job on the defined schedule.
 type TaskRanker struct {
-	PrometheusEndpoint string
-	Strategy           strategies.Strategy
-	FilterLabels       []string
-	Schedule           string
+	// DataFetcher used to pull task/container specific data.
+	DataFetcher df.Interface
+	// Strategy to use for calibration and ranking of tasks using the data fetched.
+	Strategy strategies.Interface
+	// Schedule on which the ranker runs. The schedule should follow the cron schedule format.
+	// See https://en.wikipedia.org/wiki/Cron.
+	// Alternatively, Seconds can also be specified as part of the schedule.
+	// See https://godoc.org/github.com/robfig/cron.
+	Schedule cron.Schedule
+	// runner is a cron job runner used to run the task ranker on the specified schedule.
+	runner *cron.Cron
+	// termCh is a channel used to signal the task ranker to stop.
+	termCh *util.SignalChannel
 }
 
 func New(options ...Option) (*TaskRanker, error) {
@@ -34,52 +51,75 @@ func New(options ...Option) (*TaskRanker, error) {
 			return nil, errors.Wrap(err, "failed to create task ranker")
 		}
 	}
+	tRanker.termCh = util.NewSignalChannel()
 	return tRanker, nil
 }
 
 type Option func(*TaskRanker) error
 
-func WithPrometheusEndpoint(promEndpoint string) Option {
+func WithDataFetcher(dataFetcher df.Interface) Option {
 	return func(tRanker *TaskRanker) error {
-		if promEndpoint == "" {
-			return errors.New("invalid endpoint")
+		if dataFetcher == nil {
+			return errors.New("invalid data fetcher")
 		}
-		tRanker.PrometheusEndpoint = promEndpoint
+		tRanker.DataFetcher = dataFetcher
 		return nil
 	}
 }
 
-func WithStrategy(strategy string, receiver strategies.TaskRanksReceiver) Option {
+func WithStrategy(
+	strategy string,
+	labelMatchers []*query.LabelMatcher,
+	receiver strategies.TaskRanksReceiver) Option {
+
 	return func(tRanker *TaskRanker) error {
 		if strategy == "" {
 			return errors.New("invalid strategy")
 		}
 
+		// TODO validate arguments.
 		if s, err := factory.GetTaskRankStrategy(strategy); err != nil {
 			return err
 		} else {
 			tRanker.Strategy = s
-			strategies.Build(tRanker.Strategy, receiver)
+			strategies.Build(tRanker.Strategy, labelMatchers, receiver)
+			tRanker.DataFetcher.SetStrategy(s)
 		}
 		return nil
 	}
 }
 
-func WithSchedule(schedule string) Option {
+func WithSchedule(specString string) Option {
 	return func(tRanker *TaskRanker) error {
-		if schedule == "" {
-			return errors.New("invalid schedule")
+		schedule, err := cron.NewParser(
+			cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow).Parse(specString)
+		if err != nil {
+			return errors.Wrap(err, "invalid schedule")
 		}
 		tRanker.Schedule = schedule
 		return nil
 	}
 }
 
-func WithFilterLabelsZeroValues(labels []string) Option {
-	return func(tRanker *TaskRanker) error {
-		for _, l := range labels {
-			tRanker.FilterLabels = append(tRanker.FilterLabels, l)
-		}
-		return nil
+func (tRanker *TaskRanker) Start() {
+	tRanker.runner = cron.New(cron.WithSeconds())
+	tRanker.runner.Schedule(tRanker.Schedule, tRanker)
+	tRanker.runner.Start()
+}
+
+func (tRanker *TaskRanker) Run() {
+	if tRanker.termCh.IsClosed() {
+		return
 	}
+	result, err := tRanker.DataFetcher.Fetch()
+	if err != nil {
+		log.Println(err.Error())
+	} else {
+		tRanker.Strategy.Execute(result)
+	}
+}
+
+func (tRanker *TaskRanker) Stop() {
+	tRanker.termCh.Close()
+	tRanker.runner.Stop()
 }

@@ -15,7 +15,7 @@
 package factory
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/strategies"
 )
 
@@ -32,7 +32,7 @@ var availableStrategies = map[string]struct{}{
 }
 
 // GetTaskRankStrategy instantiates a new task ranking strategy.
-func GetTaskRankStrategy(strategy string) (strategies.Strategy, error) {
+func GetTaskRankStrategy(strategy string) (strategies.Interface, error) {
 	if _, ok := availableStrategies[strategy]; !ok {
 		return nil, errors.New("invalid task ranking strategy")
 	}

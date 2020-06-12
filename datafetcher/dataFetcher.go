@@ -12,32 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package entities
+package datafetcher
 
 import (
-	"bytes"
-	"fmt"
+	"github.com/pradykaushik/task-ranker/strategies"
 	"github.com/prometheus/common/model"
 )
 
-type RankedTask struct {
-	Metric model.Metric
-	Weight float64
-}
-
-// GetMetric returns the metric as returned by the query.
-func (t RankedTask) GetMetric() model.Metric {
-	return t.Metric
-}
-
-// GetWeight returns the weight assigned to the task as a result of calibration.
-func (t RankedTask) GetWeight() float64 {
-	return t.Weight
-}
-
-func (t RankedTask) String() string {
-	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("Metric: %v\n", t.Metric))
-	buf.WriteString(fmt.Sprintf("Weight: %f\n", t.Weight))
-	return buf.String()
+// Interface defines an API for all data fetchers to implement.
+type Interface interface {
+	Fetch() (model.Value, error)
+	SetStrategy(strategies.Interface)
+	GetEndpoint() string
 }
