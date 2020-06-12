@@ -10,8 +10,10 @@ of the strategy are then fed back to the user through callbacks.
 You will need to have a [working Golang environment running at least 1.12](https://golang.org/dl/).
 
 ### How To Use?
-[Follow the instructions here](https://git-scm.com/book/en/v2/Git-Tools-Submodules) to include this repository as a git submodule.
-Then follow the below configuration and run instructions.
+Run the below command to download and install Task Ranker.
+```commandline
+go get github.com/pradykaushik/task-ranker
+```
 
 ### Environment
 Task Ranker can be used in environments where [Prometheus](https://prometheus.io/) is used to collect container
