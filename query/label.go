@@ -22,6 +22,10 @@ import (
 // LabelMatcher represents a single label matcher containing the label name (key),
 // the matching operator and the value.
 type LabelMatcher struct {
+	// Type of the label matcher.
+	// This information is used internally and is not required to build the prometheus query.
+	// If Type != Other, then label matcher is considered a dedicated label matcher.
+	Type LabelType
 	// Label name used to filter the time series data.
 	Label string
 	// Operator is used to specify the operator to use when matching (=, !=, =~, !=~).
@@ -53,6 +57,26 @@ func nameToOperator(name string) LabelMatchOperator {
 	return LabelMatchOperator(len(labelMatchOperatorNames))
 }
 
+// Type of the label.
+type LabelType int
+
+// By default, label matchers are assigned the "Other" type. However, if the label in a label matcher
+// can be used to fetch the task identifier and/or name of the host on which the task is currently running,
+// the type of the label matcher should be set to TaskID or TaskHostname respectively.
+var (
+	Other        = labelTypeIota() // Default label type.
+	TaskID       = labelTypeIota() // Indicates a dedicated label that can be keyed in to get unique task identifier.
+	TaskHostname = labelTypeIota() // Indicates a dedicated label that can be keyed in to get name of host on which task is running.
+)
+
+var labelTypes []LabelType
+
+func labelTypeIota() LabelType {
+	n := len(labelTypes)
+	labelTypes = append(labelTypes, LabelType(n))
+	return LabelType(n)
+}
+
 // String returns the label, operator and value in the format <Label><Operator>"<Value>".
 // This string can directly be used in the query string.
 func (m LabelMatcher) String() string {
@@ -71,4 +95,9 @@ func (o LabelMatchOperator) IsValid() bool {
 // String returns the string representation of the operator.
 func (o LabelMatchOperator) String() string {
 	return labelMatchOperatorNames[o-1]
+}
+
+// IsValid returns if the label type is valid.
+func (t LabelType) IsValid() bool {
+	return (t >= 0) && (int(t) < len(labelTypes))
 }

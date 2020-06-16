@@ -15,6 +15,7 @@
 package strategies
 
 import (
+	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/prometheus/common/model"
 )
@@ -30,7 +31,8 @@ type Interface interface {
 	// Note: This has to be a single metric name.
 	GetMetric() string
 	// SetLabelMatchers sets the label matchers to use to filter data.
-	SetLabelMatchers([]*query.LabelMatcher)
+	// Strategy implementations can perform additional validations on the provided label matchers.
+	SetLabelMatchers([]*query.LabelMatcher) error
 	// GetLabelMatchers returns the labels and corresponding matching operators to use
 	// filter out data that is not required by this strategy.
 	GetLabelMatchers() []*query.LabelMatcher
@@ -40,7 +42,14 @@ type Interface interface {
 }
 
 // Build the strategy object.
-func Build(s Interface, labelMatchers []*query.LabelMatcher, receiver TaskRanksReceiver) {
+func Build(s Interface, labelMatchers []*query.LabelMatcher, receiver TaskRanksReceiver) error {
+	if receiver == nil {
+		return errors.New("nil receiver provided")
+	}
+
 	s.SetTaskRanksReceiver(receiver)
-	s.SetLabelMatchers(labelMatchers)
+	if err := s.SetLabelMatchers(labelMatchers); err != nil {
+		return errors.Wrap(err, "invalid label matchers for strategy")
+	}
+	return nil
 }
