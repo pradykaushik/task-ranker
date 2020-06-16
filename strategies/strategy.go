@@ -36,7 +36,7 @@ type Interface interface {
 	GetLabelMatchers() []*query.LabelMatcher
 	// Range returns the duration specifying how far back in time data needs to be fetched.
 	// Returns the unit of time along with an integer quantifying the duration.
-	GetRange() (query.TimeUnit, int)
+	GetRange() (query.TimeUnit, uint)
 }
 
 // Build the strategy object.

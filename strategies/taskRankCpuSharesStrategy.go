@@ -98,6 +98,6 @@ func (s TaskRankCpuSharesStrategy) GetLabelMatchers() []*query.LabelMatcher {
 }
 
 // GetRange returns the time unit and duration for how far back values need to be fetched.
-func (s TaskRankCpuSharesStrategy) GetRange() (query.TimeUnit, int) {
+func (s TaskRankCpuSharesStrategy) GetRange() (query.TimeUnit, uint) {
 	return query.Seconds, 5
 }
