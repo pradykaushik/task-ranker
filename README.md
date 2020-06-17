@@ -23,7 +23,7 @@ specific metrics from hosts on the cluster that are running [docker](https://www
 resource isolation and usage information of running containers. See [cAdvisor docs](https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md)
 for more information on how to monitor cAdvisor with Prometheus.
 
-_Note that Task Ranker does not have any direct dependency on cAdvisor._
+_Note that Task Ranker does not have any direct dependency on cAdvisor. However, compatibility with other metrics exporters has not been tested._
 
 #### Configure
 Task Ranker configuration requires two components to be configured and provided.
@@ -53,6 +53,16 @@ tRanker, err = New(
         {Label: "label2", Operator: query.NotEqual, Value: ""},
     }, &dummyTaskRankReceiver{}))
 ```
+
+##### Container Label Prefixes
+Metrics exporters such as cAdvisor [prefix all container labels with `container_label_`](https://github.com/google/cadvisor/blob/1223982cc4f575354f28f631a3bd00be88ba2f9f/metrics/prometheus.go#L1633).
+Given that the Task Ranker only talks to Prometheus, the labels provided should also include these prefixes.
+
+For example, let us say that we launch a task in a docker container using the command below.
+```commandline
+docker run --label task_id="1234" -t repository/name:version
+```
+If using cAdvisor to collect and expose container specific metrics, then the label exported to Prometheus would be `container_label_task_id`.
 
 #### Start the Task Ranker
 Once the Task Ranker has been configured, then you can start it by calling `tRanker.Start()`.
