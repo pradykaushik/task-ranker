@@ -16,14 +16,14 @@ go get github.com/pradykaushik/task-ranker
 ```
 
 ### Environment
-Task Ranker can be used in environments where [Prometheus](https://prometheus.io/) is used to collect container
+Task Ranker can be used in environments where, 
+* [Prometheus](https://prometheus.io/) is used to collect container
 specific metrics from hosts on the cluster that are running [docker](https://www.docker.com/) containers.
+* [cAdvisor](https://github.com/google/cadvisor), a docker native metrics exporter is run on the hosts to export
+resource isolation and usage information of running containers.
 
-[cAdvisor](https://github.com/google/cadvisor), a docker native metrics exporter can be run on the hosts to export
-resource isolation and usage information of running containers. See [cAdvisor docs](https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md)
+See [cAdvisor docs](https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md)
 for more information on how to monitor cAdvisor with Prometheus.
-
-_Note that Task Ranker does not have any direct dependency on cAdvisor._
 
 #### Configure
 Task Ranker configuration requires two components to be configured and provided.
@@ -53,6 +53,16 @@ tRanker, err = New(
         {Label: "label2", Operator: query.NotEqual, Value: ""},
     }, &dummyTaskRankReceiver{}))
 ```
+
+##### Container Label Prefixes
+CAdvisor [prefix all container labels with `container_label_`](https://github.com/google/cadvisor/blob/1223982cc4f575354f28f631a3bd00be88ba2f9f/metrics/prometheus.go#L1633).
+Given that the Task Ranker only talks to Prometheus, the labels provided should also include these prefixes.
+
+For example, let us say that we launch a task in a docker container using the command below.
+```commandline
+docker run --label task_id="1234" -t repository/name:version
+```
+CAdvisor would then export `container_label_task_id` as the container label.
 
 #### Start the Task Ranker
 Once the Task Ranker has been configured, then you can start it by calling `tRanker.Start()`.
