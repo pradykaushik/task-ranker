@@ -55,7 +55,7 @@ tRanker, err = New(
 ```
 
 ##### Container Label Prefixes
-CAdvisor [prefix all container labels with `container_label_`](https://github.com/google/cadvisor/blob/1223982cc4f575354f28f631a3bd00be88ba2f9f/metrics/prometheus.go#L1633).
+CAdvisor [prefixes all container labels with `container_label_`](https://github.com/google/cadvisor/blob/1223982cc4f575354f28f631a3bd00be88ba2f9f/metrics/prometheus.go#L1633).
 Given that the Task Ranker only talks to Prometheus, the labels provided should also include these prefixes.
 
 For example, let us say that we launch a task in a docker container using the command below.
