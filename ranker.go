@@ -82,7 +82,10 @@ func WithStrategy(
 			return err
 		} else {
 			tRanker.Strategy = s
-			strategies.Build(tRanker.Strategy, labelMatchers, receiver)
+			err := strategies.Build(tRanker.Strategy, labelMatchers, receiver)
+			if err != nil {
+				return errors.Wrap(err, "failed to build strategy")
+			}
 			tRanker.DataFetcher.SetStrategy(s)
 		}
 		return nil

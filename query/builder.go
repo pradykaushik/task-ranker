@@ -29,7 +29,7 @@ type Builder struct {
 	// The unit of time to use when performing range queries. This is an optional field.
 	// If this field is not initialized, then
 	timeUnit     TimeUnit
-	timeDuration int
+	timeDuration uint
 	// TODO (pkaushi1) support functions.
 }
 
@@ -81,7 +81,7 @@ func WithLabelMatchers(labelMatchers ...*LabelMatcher) Option {
 
 // WithRange returns an option that initializes the time unit and the duration when
 // performing range queries.
-func WithRange(timeUnit TimeUnit, durationQty int) Option {
+func WithRange(timeUnit TimeUnit, durationQty uint) Option {
 	return func(b *Builder) {
 		b.timeUnit = timeUnit
 		b.timeDuration = durationQty

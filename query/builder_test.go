@@ -55,7 +55,7 @@ func TestGetBuilder(t *testing.T) {
 		Value:    "test_value2",
 	}, testBuilder.labelMatchers[1])
 	assert.Equal(t, Seconds, testBuilder.timeUnit)
-	assert.Equal(t, 5, testBuilder.timeDuration)
+	assert.Equal(t, uint(5), testBuilder.timeDuration)
 }
 
 func TestBuilder_BuildQuery(t *testing.T) {
