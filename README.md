@@ -64,6 +64,31 @@ docker run --label task_id="1234" -t repository/name:version
 ```
 CAdvisor would then export `container_label_task_id` as the container label.
 
+##### Dedicated Label Matchers
+The existing [cpushares task ranking strategy](./strategies/taskRankCpuSharesStrategy.go) only uses `cpushares`
+specification to rank currently running tasks. However, certain task ranking strategies could rank tasks based
+on dynamically changing metrics such as cpu usage, memory usage etc. Such strategies would therefore need to be
+able to map data pulled from prometheus to currently running tasks.
+
+Dedicated Label Matchers can be used for this purpose. A dedicated label matcher is one that the strategy is aware of
+and can use to filter data from prometheus when calibrating each running task.
+
+Currently, the following dedicated label matchers are supported.
+1. [TaskID](./query/label.go) - This is used to flag a label as one that can be used to fetch the unique identifier of
+    a task.
+2. [TaskHostname](./query/label.go) - This is used to flag a label as one that can be used to fetch the name of the
+    host on which the task is running.
+    
+Dedicated label matchers will need to be provided when using strategies that demand them.
+The below code snippet shows how a dedicated label can be provided when configuring the Task Ranker.
+
+```go
+WithStrategy("test-strategy", []*query.LabelMatcher{
+    {Type: query.TaskID, Label: "taskid_label", Operator: query.NotEqual, Value: ""},
+    ... // Other label matchers.
+})
+```
+
 #### Start the Task Ranker
 Once the Task Ranker has been configured, then you can start it by calling `tRanker.Start()`.
 

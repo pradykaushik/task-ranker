@@ -15,6 +15,7 @@
 package strategies
 
 import (
+	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/entities"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/prometheus/common/model"
@@ -78,7 +79,7 @@ func (s TaskRankCpuSharesStrategy) avgCpuShare(values []model.SamplePair) float6
 	for _, val := range values {
 		sum += float64(val.Value)
 	}
-	return sum/float64(len(values))
+	return sum / float64(len(values))
 }
 
 // GetMetric returns the name of the metric to query.
@@ -88,8 +89,12 @@ func (s TaskRankCpuSharesStrategy) GetMetric() string {
 }
 
 // SetLabelMatchers sets the label matchers to use to filter data.
-func (s *TaskRankCpuSharesStrategy) SetLabelMatchers(labelMatchers []*query.LabelMatcher) {
+func (s *TaskRankCpuSharesStrategy) SetLabelMatchers(labelMatchers []*query.LabelMatcher) error {
+	if len(labelMatchers) == 0 {
+		return errors.New("no label matchers provided")
+	}
 	s.labels = labelMatchers
+	return nil
 }
 
 // GetLabelMatchers returns the label matchers to be used to filter data.
@@ -98,6 +103,6 @@ func (s TaskRankCpuSharesStrategy) GetLabelMatchers() []*query.LabelMatcher {
 }
 
 // GetRange returns the time unit and duration for how far back values need to be fetched.
-func (s TaskRankCpuSharesStrategy) GetRange() (query.TimeUnit, int) {
+func (s TaskRankCpuSharesStrategy) GetRange() (query.TimeUnit, uint) {
 	return query.Seconds, 5
 }
