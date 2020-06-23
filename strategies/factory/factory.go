@@ -25,10 +25,16 @@ const (
 	// Provide this name as the strategy when configuring the task ranker to use it for
 	// ranking tasks.
 	cpuSharesStrategy = "cpushares"
+	// cpuUtilStrategy is the name of the task ranking strategy that ranks
+	// tasks in non-increasing order based on the cpu utilization in the past N seconds.
+	// Provide this name as the strategy when configuring the task ranker to use it for
+	// ranking tasks.
+	cpuUtilStrategy = "cpuutil"
 )
 
 var availableStrategies = map[string]strategies.Interface{
 	cpuSharesStrategy: new(strategies.TaskRankCpuSharesStrategy),
+	cpuUtilStrategy:   new(strategies.TaskRankCpuUtilStrategy),
 }
 
 // GetTaskRankStrategy returns the task ranking strategy with the given name.

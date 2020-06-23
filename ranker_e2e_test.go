@@ -55,9 +55,14 @@ func initTaskRanker(strategy string) (*TaskRanker, error) {
 	return tRanker, err
 }
 
-// Test the cpushares task ranking strategy by fetching data from a local prometheus + cAdvisor setup.
+// Test the cpushares task ranking strategy.
 func TestTaskRanker_CpuSharesRanking(t *testing.T) {
 	testStrategy(t, "cpushares")
+}
+
+// Test the cpuutil task ranking strategy.
+func TestTaskRanker_CpuUtilRanking(t *testing.T) {
+	testStrategy(t, "cpuutil")
 }
 
 func testStrategy(t *testing.T, strategy string) {
