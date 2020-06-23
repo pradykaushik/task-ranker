@@ -22,7 +22,7 @@ import (
 var testBuilder *Builder
 
 func TestMain(m *testing.M) {
-	testBuilder = GetBuilder(
+	testBuilder = NewBuilder(
 		WithMetric("test_metric"),
 		WithLabelMatchers(
 			&LabelMatcher{

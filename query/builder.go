@@ -33,17 +33,11 @@ type Builder struct {
 	// TODO (pkaushi1) support functions.
 }
 
-// Singleton builder instance.
-var builderInstance *Builder
-
-// GetBuilder instantiates the singleton Builder instance if required
-// and then returns it.
-func GetBuilder(options ...Option) *Builder {
-	if builderInstance == nil {
-		builderInstance = new(Builder)
-		for _, opt := range options {
-			opt(builderInstance)
-		}
+// NewBuilder returns a new Builder by applying all the given options.
+func NewBuilder(options ...Option) *Builder {
+	builderInstance := new(Builder)
+	for _, opt := range options {
+		opt(builderInstance)
 	}
 
 	return builderInstance
