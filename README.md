@@ -25,7 +25,7 @@ resource isolation and usage information of running containers.
 See [cAdvisor docs](https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md)
 for more information on how to monitor cAdvisor with Prometheus.
 
-##### Container Label Prefixes
+#### Container Label Prefixes
 CAdvisor [prefixes all container labels with `container_label_`](https://github.com/google/cadvisor/blob/1223982cc4f575354f28f631a3bd00be88ba2f9f/metrics/prometheus.go#L1633).
 Given that the Task Ranker only talks to Prometheus, the labels provided should also include these prefixes.
 For example, let us say that we launch a task in a docker container using the command below.
