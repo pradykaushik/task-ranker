@@ -22,19 +22,20 @@ import (
 const (
 	// cpuSharesStrategy is the name of the task ranking strategy that ranks
 	// tasks in non-increasing order based on the allocated cpu-shares.
-	// Provide this name as the strategy in the task ranker config to use this strategy
-	// for ranking tasks.
+	// Provide this name as the strategy when configuring the task ranker to use it for
+	// ranking tasks.
 	cpuSharesStrategy = "cpushares"
 )
 
-var availableStrategies = map[string]struct{}{
-	cpuSharesStrategy: {},
+var availableStrategies = map[string]strategies.Interface{
+	cpuSharesStrategy: new(strategies.TaskRankCpuSharesStrategy),
 }
 
-// GetTaskRankStrategy instantiates a new task ranking strategy.
+// GetTaskRankStrategy returns the task ranking strategy with the given name.
 func GetTaskRankStrategy(strategy string) (strategies.Interface, error) {
-	if _, ok := availableStrategies[strategy]; !ok {
+	if s, ok := availableStrategies[strategy]; !ok {
 		return nil, errors.New("invalid task ranking strategy")
+	} else {
+		return s, nil
 	}
-	return new(strategies.TaskRankCpuSharesStrategy), nil
 }

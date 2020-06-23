@@ -18,9 +18,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/prometheus/common/model"
+	"time"
 )
 
 type Interface interface {
+	// Init initializes the task ranking strategy, if needed.
+	// The Prometheus scrape interval is also provided.
+	Init(prometheusScrapeInterval time.Duration)
 	// SetTaskRanksReceiver registers a receiver of the task ranking results.
 	// This receiver is a callback and is used to pass the result of applying
 	// the strategy to rank tasks.
@@ -42,10 +46,17 @@ type Interface interface {
 }
 
 // Build the strategy object.
-func Build(s Interface, labelMatchers []*query.LabelMatcher, receiver TaskRanksReceiver) error {
+func Build(
+	s Interface,
+	labelMatchers []*query.LabelMatcher,
+	receiver TaskRanksReceiver,
+	prometheusScrapeInterval time.Duration) error {
+
 	if receiver == nil {
 		return errors.New("nil receiver provided")
 	}
+
+	s.Init(prometheusScrapeInterval)
 
 	s.SetTaskRanksReceiver(receiver)
 	if err := s.SetLabelMatchers(labelMatchers); err != nil {
