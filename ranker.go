@@ -23,6 +23,7 @@ import (
 	"github.com/pradykaushik/task-ranker/util"
 	"github.com/robfig/cron/v3"
 	"log"
+	"time"
 )
 
 // TaskRanker fetches data pertaining to currently running tasks, deploys a strategy
@@ -70,7 +71,8 @@ func WithDataFetcher(dataFetcher df.Interface) Option {
 func WithStrategy(
 	strategy string,
 	labelMatchers []*query.LabelMatcher,
-	receiver strategies.TaskRanksReceiver) Option {
+	receiver strategies.TaskRanksReceiver,
+	prometheusScrapeInterval time.Duration) Option {
 
 	return func(tRanker *TaskRanker) error {
 		if strategy == "" {
@@ -82,7 +84,7 @@ func WithStrategy(
 			return err
 		} else {
 			tRanker.Strategy = s
-			err := strategies.Build(tRanker.Strategy, labelMatchers, receiver)
+			err := strategies.Build(tRanker.Strategy, labelMatchers, receiver, prometheusScrapeInterval)
 			if err != nil {
 				return errors.Wrap(err, "failed to build strategy")
 			}

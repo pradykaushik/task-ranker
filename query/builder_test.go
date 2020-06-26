@@ -22,7 +22,7 @@ import (
 var testBuilder *Builder
 
 func TestMain(m *testing.M) {
-	testBuilder = GetBuilder(
+	testBuilder = NewBuilder(
 		WithMetric("test_metric"),
 		WithLabelMatchers(
 			&LabelMatcher{
@@ -40,7 +40,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func TestGetBuilder(t *testing.T) {
+func TestNewBuilder(t *testing.T) {
 	assert.NotNil(t, testBuilder)
 	assert.Equal(t, "test_metric", testBuilder.metric)
 	assert.Len(t, testBuilder.labelMatchers, 2)

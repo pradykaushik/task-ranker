@@ -35,6 +35,8 @@ type DataFetcher struct {
 	// DataFetcher uses the strategy to obtain basic information about the query such as
 	// metric name, labels for filtering, match operation to perform etc.
 	strategy strategies.Interface
+	// queryBuilder represents the query builder that is used to build the promQL query string.
+	queryBuilder *query.Builder
 }
 
 type Option func(f *DataFetcher) error
@@ -62,9 +64,13 @@ func WithPrometheusEndpoint(endpoint string) Option {
 	}
 }
 
-// SetStrategy sets the task ranking strategy.
+// SetStrategy sets the task ranking strategy and instantiates the query builder.
 func (f *DataFetcher) SetStrategy(s strategies.Interface) {
 	f.strategy = s
+	f.queryBuilder = query.NewBuilder(
+		query.WithMetric(s.GetMetric()),
+		query.WithLabelMatchers(s.GetLabelMatchers()...),
+		query.WithRange(s.GetRange()))
 }
 
 // GetEndpoint returns the prometheus HTTP server endpoint.
@@ -77,11 +83,7 @@ func (f *DataFetcher) GetEndpoint() string {
 // Time series is fetched using the v1 API. Note that v1 API is still in experimental stage and
 // therefore we need to watch out for compatibility issues.
 func (f *DataFetcher) Fetch() (result model.Value, err error) {
-	queryBuilder := query.GetBuilder(
-		query.WithMetric(f.strategy.GetMetric()),
-		query.WithLabelMatchers(f.strategy.GetLabelMatchers()...),
-		query.WithRange(f.strategy.GetRange()))
-	queryString := queryBuilder.BuildQuery()
+	queryString := f.queryBuilder.BuildQuery()
 	// Following examples from here - https://github.com/prometheus/client_golang/blob/master/api/prometheus/v1/example_test.go.
 	var client api.Client
 	client, err = api.NewClient(api.Config{Address: f.endpoint})

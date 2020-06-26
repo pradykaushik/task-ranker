@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Stopping and Removing containers corresponding to the tasks.
+for i in {1..3}; do
+  task_name="test_hello_${i}"
+  docker stop $task_name
+  docker rm $task_name
+done
+
+# Bringing down prometheus and cAdvisor.
+docker-compose down

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Launching cAdvisor and prometheus using docker compose.
+docker-compose up -d
+
+# Running tasks.
+for i in {1..3}; do
+  cpushares=$(expr $i \* 1024)
+  docker run -d --name test_hello_"$i" --label task_id="hello_${i}" --label task_host="localhost" --cpu-shares $cpushares -it taskranker/hello:latest
+done
