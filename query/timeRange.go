@@ -26,6 +26,7 @@ var (
 	Days    = nameToUnit("d")
 	Weeks   = nameToUnit("w")
 	Years   = nameToUnit("y")
+	None    = nameToUnit("none") // Represents nil value for TimeUnit.
 )
 
 // timeUnitNames stores the string representation of the time unit that is used in range queries.
@@ -38,7 +39,7 @@ func (t TimeUnit) String() string {
 
 // IsValid returns if a time unit is valid.
 func (t TimeUnit) IsValid() bool {
-	return (t > 0) && (t <= TimeUnit(len(timeUnitNames)))
+	return (t != None) && (t > 0) && (t <= TimeUnit(len(timeUnitNames)))
 }
 
 // nameToUnit converts the provided time unit name to an integer.

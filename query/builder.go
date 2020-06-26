@@ -52,7 +52,9 @@ func (b Builder) BuildQuery() string {
 		filters = append(filters, m.String())
 	}
 	buf.WriteString(fmt.Sprintf("{%s}", strings.Join(filters, ",")))
-	buf.WriteString(fmt.Sprintf("[%d%s]", b.timeDuration, b.timeUnit))
+	if b.timeUnit.IsValid() {
+		buf.WriteString(fmt.Sprintf("[%d%s]", b.timeDuration, b.timeUnit))
+	}
 	return buf.String()
 }
 
