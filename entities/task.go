@@ -75,9 +75,5 @@ func (t Task) GetHostname() string {
 }
 
 func (t Task) String() string {
-	var buf bytes.Buffer
-	buf.WriteString("[")
-	buf.WriteString(fmt.Sprintf("TaskID = %s, Hostname = %s, Weight = %f", t.ID, t.Hostname, t.Weight))
-	buf.WriteString("]")
-	return buf.String()
+	return fmt.Sprintf("[TaskID = %s, Hostname = %s, Weight = %f]", t.ID, t.Hostname, t.Weight)
 }
