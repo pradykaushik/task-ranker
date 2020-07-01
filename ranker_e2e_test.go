@@ -42,6 +42,9 @@ func initTaskRanker(strategy string) (*TaskRanker, error) {
 
 	prometheusDataFetcher, err = prometheus.NewDataFetcher(
 		prometheus.WithPrometheusEndpoint("http://localhost:9090"))
+	if err != nil {
+		return nil, err
+	}
 
 	dummyReceiver = new(dummyTaskRanksReceiver)
 	tRanker, err = New(

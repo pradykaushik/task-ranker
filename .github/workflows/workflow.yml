@@ -1,4 +1,4 @@
-name: Task-Ranker
+name: Build and Test
 
 on:
   push:
@@ -34,4 +34,8 @@ jobs:
       run: go build -v .
 
     - name: Test
-      run: go test -v ./...
+      run: |
+        ./create_test_env
+        sleep 3s
+        go test -v ./...
+        ./tear_down_test_env
