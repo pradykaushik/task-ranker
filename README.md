@@ -1,4 +1,7 @@
-# Task Ranker [![GoDoc](https://godoc.org/github.com/pradykaushik/task-ranker?status.svg)](https://godoc.org/github.com/pradykaushik/task-ranker)
+# Task Ranker 
+[![GoDoc](https://godoc.org/github.com/pradykaushik/task-ranker?status.svg)](https://godoc.org/github.com/pradykaushik/task-ranker)
+![Build](https://github.com/pradykaushik/task-ranker/workflows/Task-Ranker/badge.svg)]
+
 Rank tasks running as docker containers in a cluster.
 
 Task Ranker runs as a cron job on a specified schedule. Each time the task ranker is run,
