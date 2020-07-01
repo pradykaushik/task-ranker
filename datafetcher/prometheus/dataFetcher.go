@@ -23,6 +23,7 @@ import (
 	"github.com/prometheus/client_golang/api"
 	"github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	"net/http"
 	"time"
 )
 
@@ -58,6 +59,11 @@ func WithPrometheusEndpoint(endpoint string) Option {
 	return func(f *DataFetcher) error {
 		if endpoint == "" {
 			return errors.New("invalid endpoint")
+		}
+		// Validating the prometheus endpoint.
+		_, err := http.Get(endpoint + "/metrics")
+		if err != nil {
+			return errors.Wrap(err, "invalid endpoint for prometheus server")
 		}
 		f.endpoint = endpoint
 		return nil
