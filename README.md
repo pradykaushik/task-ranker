@@ -1,6 +1,6 @@
 # Task Ranker 
 [![GoDoc](https://godoc.org/github.com/pradykaushik/task-ranker?status.svg)](https://godoc.org/github.com/pradykaushik/task-ranker)
-![Build](https://github.com/pradykaushik/task-ranker/workflows/Task-Ranker/badge.svg)]
+![Build](https://github.com/pradykaushik/task-ranker/workflows/Task-Ranker/badge.svg)
 
 Rank tasks running as docker containers in a cluster.
 
