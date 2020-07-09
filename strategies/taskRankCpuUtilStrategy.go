@@ -41,10 +41,19 @@ type TaskRankCpuUtilStrategy struct {
 	dedicatedLabelNameTaskHostname model.LabelName
 	// prometheusScrapeInterval corresponds to the time interval between two successive metrics scrapes.
 	prometheusScrapeInterval time.Duration
+	// Time duration for range query.
+	rangeTimeUnit query.TimeUnit
+	rangeQty      uint
 }
 
-// Init initializes the prometheus scrape interval.
-func (s *TaskRankCpuUtilStrategy) Init(prometheusScrapeInterval time.Duration) {
+func (s *TaskRankCpuUtilStrategy) Init() {
+	// By default, rank tasks based on past 5 seconds cpu usage.
+	s.rangeTimeUnit = query.Seconds
+	s.rangeQty = 5
+}
+
+// SetPrometheusScrapeInterval sets the scrape interval of prometheus.
+func (s *TaskRankCpuUtilStrategy) SetPrometheusScrapeInterval(prometheusScrapeInterval time.Duration) {
 	s.prometheusScrapeInterval = prometheusScrapeInterval
 }
 
@@ -208,5 +217,13 @@ func (s TaskRankCpuUtilStrategy) GetLabelMatchers() []*query.LabelMatcher {
 
 // GetRange returns the time unit and duration for how far back (in seconds) values need to be fetched.
 func (s TaskRankCpuUtilStrategy) GetRange() (query.TimeUnit, uint) {
-	return query.Seconds, uint(5 * int(s.prometheusScrapeInterval.Seconds()))
+	return s.rangeTimeUnit, s.rangeQty
+	// return query.Seconds, uint(5 * int(s.prometheusScrapeInterval.Seconds()))
+}
+
+// SetRange sets the time duration for the range query.
+// For cpu-util ranking strategy the time duration has to be > 1s as you need two data points to calculate cpu utilization.
+func (s *TaskRankCpuUtilStrategy) SetRange(timeUnit query.TimeUnit, qty uint) {
+	s.rangeTimeUnit = timeUnit
+	s.rangeQty = qty
 }
