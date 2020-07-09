@@ -223,7 +223,14 @@ func (s TaskRankCpuUtilStrategy) GetRange() (query.TimeUnit, uint) {
 
 // SetRange sets the time duration for the range query.
 // For cpu-util ranking strategy the time duration has to be > 1s as you need two data points to calculate cpu utilization.
+// If the provided time duration <= 1s, the default duration of 5 intervals of time is used, where each
+// interval of time is equal to the prometheus scrape interval.
 func (s *TaskRankCpuUtilStrategy) SetRange(timeUnit query.TimeUnit, qty uint) {
-	s.rangeTimeUnit = timeUnit
-	s.rangeQty = qty
+	if !timeUnit.IsValid() || ((timeUnit == query.Seconds) && qty <= 1) {
+		s.rangeTimeUnit = query.Seconds
+		s.rangeQty = uint(5 * int(s.prometheusScrapeInterval.Seconds()))
+	} else {
+		s.rangeTimeUnit = timeUnit
+		s.rangeQty = qty
+	}
 }
