@@ -72,7 +72,32 @@ tRanker, err = New(
     WithStrategy("cpushares", []*query.LabelMatcher{
         {Type: query.TaskID, Label: "container_label_task_id", Operator: query.NotEqual, Value: ""},
         {Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"},
-    }, &dummyTaskRanksReceiver{}))
+    }, new(dummyTaskRanksReceiver), 1*time.Second))
+```
+
+You can now also configure the strategies using initialization [options](./strategies/strategy.go). This allows for 
+configuring the time duration of range queries, enabling fine-grained control over the number of data points
+over which the strategy is applied. See below example for strategy configuration using options.
+```go
+type dummyTaskRanksReceiver struct{}
+
+func (r *dummyTaskRanksReceiver) Receive(rankedTasks entities.RankedTasks) {
+	log.Println(rankedTasks)
+}
+
+prometheusDataFetcher, err = prometheus.NewDataFetcher(
+    prometheus.WithPrometheusEndpoint("http://localhost:9090"))
+
+tRanker, err = New(
+    WithDataFetcher(prometheusDataFetcher),
+    WithSchedule("?/5 * * * * *"),
+    WithStrategyOptions("cpuutil",
+        strategies.WithLabelMatchers([]*query.LabelMatcher{
+            {Type: query.TaskID, Label: "container_label_task_id", Operator: query.NotEqual, Value: ""},
+            {Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"}}),
+        strategies.WithTaskRanksReceiver(new(dummyTaskRanksReceiver)),
+        strategies.WithPrometheusScrapeInterval(1*time.Second),
+        strategies.WithRange(query.Seconds, 5)))
 ```
 
 ##### Dedicated Label Matchers

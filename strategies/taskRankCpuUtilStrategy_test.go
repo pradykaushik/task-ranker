@@ -32,19 +32,25 @@ func (r *cpuUtilRanksReceiver) Receive(rankedTasks entities.RankedTasks) {
 	r.rankedTasks = rankedTasks
 }
 
-func TestTaskRankCpuUtilStrategy_SetTaskRanksReceiver(t *testing.T) {
+func initCpuUtilStrategy() *TaskRankCpuUtilStrategy {
 	s := &TaskRankCpuUtilStrategy{}
+	s.Init()
+	return s
+}
+
+func TestTaskRankCpuUtilStrategy_SetTaskRanksReceiver(t *testing.T) {
+	s := initCpuUtilStrategy()
 	s.SetTaskRanksReceiver(&cpuUtilRanksReceiver{})
 	assert.NotNil(t, s.receiver)
 }
 
 func TestTaskRankCpuUtilStrategy_GetMetric(t *testing.T) {
-	s := &TaskRankCpuUtilStrategy{}
+	s := initCpuUtilStrategy()
 	assert.Equal(t, "container_cpu_usage_seconds_total", s.GetMetric())
 }
 
 func TestTaskRankCpuUtilStrategy_SetLabelMatchers(t *testing.T) {
-	s := &TaskRankCpuUtilStrategy{}
+	s := initCpuUtilStrategy()
 	err := s.SetLabelMatchers([]*query.LabelMatcher{
 		{Type: query.TaskID, Label: "test_label_1", Operator: query.NotEqual, Value: ""},
 		{Type: query.TaskHostname, Label: "test_label_2", Operator: query.Equal, Value: "localhost"},
@@ -59,11 +65,12 @@ func TestTaskRankCpuUtilStrategy_SetLabelMatchers(t *testing.T) {
 
 func TestTaskRankCpuUtilStrategy_GetRange(t *testing.T) {
 	s := &TaskRankCpuUtilStrategy{prometheusScrapeInterval: 1 * time.Second}
+	s.Init()
 
 	checkRange := func(strategy *TaskRankCpuUtilStrategy) {
 		timeUnit, qty := strategy.GetRange()
 		assert.Equal(t, query.Seconds, timeUnit)
-		assert.Equal(t, uint(5*strategy.prometheusScrapeInterval.Seconds()), qty)
+		assert.Equal(t, uint(5), qty)
 	}
 
 	count := 5
@@ -184,6 +191,7 @@ func TestTaskRankCpuUtilStrategy_Execute(t *testing.T) {
 		dedicatedLabelNameTaskHostname: model.LabelName("container_label_task_host"),
 		prometheusScrapeInterval:       1 * time.Second,
 	}
+	s.Init()
 
 	data := mockCpuUtilData("container_label_task_id", "container_label_task_host")
 	s.Execute(data)
