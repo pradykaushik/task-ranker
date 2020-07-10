@@ -36,9 +36,17 @@ type TaskRankCpuSharesStrategy struct {
 	// dedicatedLabelNameTaskHostname is the dedicated label to use when filtering metrics on a hostname basis.
 	// Storing this quick access instead of performing another O(n) search through labels.
 	dedicatedLabelNameTaskHostname model.LabelName
+	// Time duration for range query.
+	rangeTimeUnit query.TimeUnit
+	rangeQty      uint
 }
 
-func (s *TaskRankCpuSharesStrategy) Init(time.Duration) {}
+func (s *TaskRankCpuSharesStrategy) Init() {
+	s.rangeTimeUnit = query.None // By default cpu-shares ranking does not require a range query.
+	s.rangeQty = 0
+}
+
+func (s *TaskRankCpuSharesStrategy) SetPrometheusScrapeInterval(_ time.Duration) {}
 
 // SetTaskRanksReceiver sets the receiver of the results of task ranking.
 func (s *TaskRankCpuSharesStrategy) SetTaskRanksReceiver(receiver TaskRanksReceiver) {
@@ -49,14 +57,17 @@ func (s *TaskRankCpuSharesStrategy) SetTaskRanksReceiver(receiver TaskRanksRecei
 func (s *TaskRankCpuSharesStrategy) Execute(data model.Value) {
 	valueT := data.Type()
 	var matrix model.Matrix
-	// Safety check to make sure that we cast to matrix only if value type is matrix.
+	var vector model.Vector
+	// Safety check to make sure that we cast to matrix/vector based on valueT.
 	// Note, however, that as the strategy decides the metric and the range for fetching
 	// data, it can assume the value type.
-	// For example, if a range is provided, then the value type would
-	// be a matrix.
+	// For example, if a range is provided, then the value type would be a matrix.
+	// If no range is provided, then the value type would be a vector.
 	switch valueT {
 	case model.ValMatrix:
 		matrix = data.(model.Matrix)
+	case model.ValVector:
+		vector = data.(model.Vector)
 	default:
 		// invalid value type.
 		// TODO do not ignore this. maybe log it?
@@ -64,27 +75,40 @@ func (s *TaskRankCpuSharesStrategy) Execute(data model.Value) {
 
 	// Initializing tasks to rank.
 	var tasks = make(entities.RankedTasks)
-	for _, sampleStream := range matrix {
-		if hostname, ok := sampleStream.Metric[s.dedicatedLabelNameTaskHostname]; ok {
+	addEntryForTask := func(metric model.Metric, weight float64) {
+		// Fetching hostname and adding entry for host and task.
+		if hostname, ok := metric[s.dedicatedLabelNameTaskHostname]; ok {
+			// Adding entry for host if needed.
 			if _, ok := tasks[entities.Hostname(hostname)]; !ok {
 				tasks[entities.Hostname(hostname)] = make([]entities.Task, 0)
 			}
-			// Fetching the task id.
-			if taskID, ok := sampleStream.Metric[s.dedicatedLabelNameTaskID]; ok {
+
+			// Fetching task id and adding entry for task.
+			if taskID, ok := metric[s.dedicatedLabelNameTaskID]; ok {
 				tasks[entities.Hostname(hostname)] = append(tasks[entities.Hostname(hostname)],
 					entities.Task{
-						Metric:   sampleStream.Metric,
+						Metric:   metric,
 						ID:       string(taskID),
 						Hostname: string(hostname),
-						// As cpu shares allocated to a container can be updated for docker containers,
-						// taking the average of allocated cpu shares.
-						Weight: s.avgCpuShare(sampleStream.Values),
+						Weight:   weight,
 					})
 			} else {
 				// SHOULD NOT BE HERE.
 			}
 		} else {
 			// SHOULD NOT BE HERE.
+		}
+	}
+
+	if matrix != nil {
+		for _, sampleStream := range matrix {
+			// As cpu shares allocated to a container can be updated for docker containers,
+			// taking the average of allocated cpu shares.
+			addEntryForTask(sampleStream.Metric, s.avgCpuShare(sampleStream.Values))
+		}
+	} else if vector != nil {
+		for _, sample := range vector {
+			addEntryForTask(sample.Metric, float64(sample.Value))
 		}
 	}
 
@@ -151,5 +175,11 @@ func (s TaskRankCpuSharesStrategy) GetLabelMatchers() []*query.LabelMatcher {
 
 // GetRange returns the time unit and duration for how far back values need to be fetched.
 func (s TaskRankCpuSharesStrategy) GetRange() (query.TimeUnit, uint) {
-	return query.Seconds, 1
+	return s.rangeTimeUnit, s.rangeQty
+}
+
+// SetRange sets the time duration for the range query.
+func (s *TaskRankCpuSharesStrategy) SetRange(timeUnit query.TimeUnit, qty uint) {
+	s.rangeTimeUnit = timeUnit
+	s.rangeQty = qty
 }

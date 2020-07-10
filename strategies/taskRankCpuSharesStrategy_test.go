@@ -31,19 +31,25 @@ func (r *cpuSharesRanksReceiver) Receive(rankedTasks entities.RankedTasks) {
 	r.rankedTasks = rankedTasks
 }
 
-func TestTaskRankCpuSharesStrategy_SetTaskRanksReceiver(t *testing.T) {
+func initCpusharesStrategy() *TaskRankCpuSharesStrategy {
 	s := &TaskRankCpuSharesStrategy{}
+	s.Init()
+	return s
+}
+
+func TestTaskRankCpuSharesStrategy_SetTaskRanksReceiver(t *testing.T) {
+	s := initCpusharesStrategy()
 	s.SetTaskRanksReceiver(&cpuSharesRanksReceiver{})
 	assert.NotNil(t, s.receiver)
 }
 
 func TestTaskRankCpuSharesStrategy_GetMetric(t *testing.T) {
-	s := &TaskRankCpuSharesStrategy{}
+	s := initCpusharesStrategy()
 	assert.Equal(t, "container_spec_cpu_shares", s.GetMetric())
 }
 
 func TestTaskRankCpuSharesStrategy_SetLabelMatchers(t *testing.T) {
-	s := &TaskRankCpuSharesStrategy{}
+	s := initCpusharesStrategy()
 	err := s.SetLabelMatchers([]*query.LabelMatcher{
 		{Type: query.TaskID, Label: "test_label_1", Operator: query.NotEqual, Value: ""},
 		{Type: query.TaskHostname, Label: "test_label_2", Operator: query.Equal, Value: "localhost"},
@@ -57,10 +63,10 @@ func TestTaskRankCpuSharesStrategy_SetLabelMatchers(t *testing.T) {
 }
 
 func TestTaskRankCpuSharesStrategy_GetRange(t *testing.T) {
-	s := &TaskRankCpuSharesStrategy{}
+	s := initCpusharesStrategy()
 	timeUnit, qty := s.GetRange()
-	assert.Equal(t, query.Seconds, timeUnit)
-	assert.Equal(t, uint(1), qty)
+	assert.Equal(t, query.None, timeUnit)
+	assert.Equal(t, uint(0), qty)
 }
 
 // mockCpuSharesData returns a mock of prometheus time series data.
@@ -114,6 +120,7 @@ func TestTaskRankCpuSharesStrategy_Execute(t *testing.T) {
 		dedicatedLabelNameTaskID:       model.LabelName("container_label_task_id"),
 		dedicatedLabelNameTaskHostname: model.LabelName("container_label_task_host"),
 	}
+	s.Init()
 
 	data := mockCpuSharesData("container_label_task_id", "container_label_task_host")
 	s.Execute(data)

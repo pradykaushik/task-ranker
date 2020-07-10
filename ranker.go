@@ -68,6 +68,10 @@ func WithDataFetcher(dataFetcher df.Interface) Option {
 	}
 }
 
+// WithStrategy builds the task ranking strategy associated with the given name using the provided information.
+// For backwards compatibility, strategies that use range queries will use the default duration. If the time
+// duration for the range query needs to be configured, then use WithStrategyOptions(...) to configure the strategy
+// and provide the WithRange(...) option.
 func WithStrategy(
 	strategy string,
 	labelMatchers []*query.LabelMatcher,
@@ -79,12 +83,35 @@ func WithStrategy(
 			return errors.New("invalid strategy")
 		}
 
-		// TODO validate arguments.
 		if s, err := factory.GetTaskRankStrategy(strategy); err != nil {
 			return err
 		} else {
 			tRanker.Strategy = s
-			err := strategies.Build(tRanker.Strategy, labelMatchers, receiver, prometheusScrapeInterval)
+			err := strategies.Build(s,
+				strategies.WithLabelMatchers(labelMatchers),
+				strategies.WithTaskRanksReceiver(receiver),
+				strategies.WithPrometheusScrapeInterval(prometheusScrapeInterval))
+			if err != nil {
+				return errors.Wrap(err, "failed to build strategy")
+			}
+			tRanker.DataFetcher.SetStrategy(s)
+		}
+		return nil
+	}
+}
+
+// WithStrategyOptions builds the strategy associated with the given name using the provided initialization options.
+func WithStrategyOptions(strategy string, strategyOptions ...strategies.Option) Option {
+	return func(tRanker *TaskRanker) error {
+		if strategy == "" {
+			return errors.New("invalid strategy")
+		}
+
+		if s, err := factory.GetTaskRankStrategy(strategy); err != nil {
+			return err
+		} else {
+			tRanker.Strategy = s
+			err := strategies.Build(s, strategyOptions...)
 			if err != nil {
 				return errors.Wrap(err, "failed to build strategy")
 			}

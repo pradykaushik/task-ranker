@@ -19,6 +19,7 @@ import (
 	"github.com/pradykaushik/task-ranker/datafetcher/prometheus"
 	"github.com/pradykaushik/task-ranker/entities"
 	"github.com/pradykaushik/task-ranker/query"
+	"github.com/pradykaushik/task-ranker/strategies"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -58,18 +59,46 @@ func initTaskRanker(strategy string) (*TaskRanker, error) {
 	return tRanker, err
 }
 
+func initTaskRankerOptions(strategy string) (*TaskRanker, error) {
+	var prometheusDataFetcher datafetcher.Interface
+	var err error
+	var tRanker *TaskRanker
+
+	prometheusDataFetcher, err = prometheus.NewDataFetcher(
+		prometheus.WithPrometheusEndpoint("http://localhost:9090"))
+	if err != nil {
+		return nil, err
+	}
+
+	dummyReceiver = new(dummyTaskRanksReceiver)
+	tRanker, err = New(
+		WithDataFetcher(prometheusDataFetcher),
+		WithSchedule("?/5 * * * * *"),
+		WithStrategyOptions(strategy,
+			strategies.WithLabelMatchers([]*query.LabelMatcher{
+				{Type: query.TaskID, Label: "container_label_task_id", Operator: query.EqualRegex, Value: "hello_.*"},
+				{Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"}}),
+			strategies.WithTaskRanksReceiver(dummyReceiver),
+			strategies.WithPrometheusScrapeInterval(1*time.Second),
+			strategies.WithRange(query.Seconds, 5)))
+
+	return tRanker, err
+
+}
+
 // Test the cpushares task ranking strategy.
 func TestTaskRanker_CpuSharesRanking(t *testing.T) {
-	testStrategy(t, "cpushares")
+	tRanker, initErr := initTaskRanker("cpushares")
+	testStrategy(t, tRanker, initErr)
 }
 
 // Test the cpuutil task ranking strategy.
 func TestTaskRanker_CpuUtilRanking(t *testing.T) {
-	testStrategy(t, "cpuutil")
+	tRanker, initErr := initTaskRankerOptions("cpuutil")
+	testStrategy(t, tRanker, initErr)
 }
 
-func testStrategy(t *testing.T, strategy string) {
-	tRanker, initErr := initTaskRanker(strategy)
+func testStrategy(t *testing.T, tRanker *TaskRanker, initErr error) {
 	assert.NoError(t, initErr)
 	assert.NotNil(t, tRanker)
 	tRanker.Start()
