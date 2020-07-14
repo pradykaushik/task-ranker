@@ -30,7 +30,7 @@ type Builder struct {
 	// If this field is not initialized, then
 	timeUnit     TimeUnit
 	timeDuration uint
-	// TODO (pkaushi1) support functions.
+	// TODO (pradykaushik) support functions.
 }
 
 // NewBuilder returns a new Builder by applying all the given options.
