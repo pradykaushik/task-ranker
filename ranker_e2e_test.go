@@ -102,7 +102,7 @@ func testStrategy(t *testing.T, tRanker *TaskRanker, initErr error) {
 	assert.NoError(t, initErr)
 	assert.NotNil(t, tRanker)
 	tRanker.Start()
-	<-time.After(7 * time.Second) // Enough time for one round of ranking.
+	<-time.After(13 * time.Second) // Enough time for at least one round of ranking.
 	testRanked(t)
 	tRanker.Stop()
 }

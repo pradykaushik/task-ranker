@@ -24,10 +24,10 @@ import (
 )
 
 // TaskRankCpuUtilStrategy is a task ranking strategy that ranks the tasks
-// in non-increasing order based on the cpu utilization (%) in the past 5 intervals of time.
+// in non-increasing order based on their cpu utilization (%).
 //
-// For example, if Prometheus scrapes metrics every 1s, then each time interval is 1s long.
-// This strategy then would then rank tasks based on their cpu utilization in the past 5 seconds.
+// For example, if Prometheus scrapes metrics every 1s, then this strategy would rank tasks based
+// on their cpu utilization in the past second.
 type TaskRankCpuUtilStrategy struct {
 	// receiver of the results of task ranking.
 	receiver TaskRanksReceiver
@@ -41,15 +41,27 @@ type TaskRankCpuUtilStrategy struct {
 	dedicatedLabelNameTaskHostname model.LabelName
 	// prometheusScrapeInterval corresponds to the time interval between two successive metrics scrapes.
 	prometheusScrapeInterval time.Duration
+	// previousTotalCpuUsage stores the sum of cumulative cpu usage seconds for each running task.
+	previousTotalCpuUsage map[string]map[string]*taskCpuUsageInfo
 	// Time duration for range query.
+	// Note that there is a caveat in using range queries to retrieve cpu time for containers.
+	// If the tasks are pinned, then using a range > 1s works as we would always get the necessary data points for each cpu (thread).
+	// On the other hand, if the tasks are not pinned, then there is no guarantee that the necessary number of data points be available
+	// as the cpu scheduler can preempt and re-schedule the task on any available cpu.
+	// Therefore, to avoid confusion, this strategy does not use the range query.
 	rangeTimeUnit query.TimeUnit
 	rangeQty      uint
 }
 
+type taskCpuUsageInfo struct {
+	task                  *entities.Task
+	prevTotalCpuUsageTask *float64
+}
+
 func (s *TaskRankCpuUtilStrategy) Init() {
-	// By default, rank tasks based on past 5 seconds cpu usage.
-	s.rangeTimeUnit = query.Seconds
-	s.rangeQty = 5
+	s.rangeTimeUnit = query.None
+	s.rangeQty = 0
+	s.previousTotalCpuUsage = make(map[string]map[string]*taskCpuUsageInfo)
 }
 
 // SetPrometheusScrapeInterval sets the scrape interval of prometheus.
@@ -65,70 +77,64 @@ func (s *TaskRankCpuUtilStrategy) SetTaskRanksReceiver(receiver TaskRanksReceive
 // Execute the strategy using the provided data.
 func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 	valueT := data.Type()
-	var matrix model.Matrix
-	// Safety check to make sure that we cast to matrix only if value type is matrix.
+	var vector model.Vector
+	// Safety check to make sure that we cast to vector only if value type is vector.
 	// Note, however, that as the strategy decides the metric and the range for fetching data,
-	// it can assume the value type. For example, if a range is provided, then the value type would
-	// be a matrix.
+	// it can assume the value type.
+	// For example, if a range is provided, then the value type would be a matrix.
+	// If no range is provided, the value type would be a vector.
 	switch valueT {
-	case model.ValMatrix:
-		matrix = data.(model.Matrix)
+	case model.ValVector:
+		vector = data.(model.Vector)
 	default:
 		// invalid value type.
 		// TODO do not ignore this. maybe log it?
 	}
 
-	// cpuLabelName is the label name that can be used to fetch the cpu associated with the usage data.
-	const cpuLabelName model.LabelName = "cpu"
-
-	type hostValueT model.LabelValue
-	type taskIDValueT model.LabelValue
-
 	var ok bool
-	// allTasksCpuUsageSeconds stores the cpu utilization (%) for all tasks on each cpu on each host.
-	allTasksCpuUsageSeconds := make(map[hostValueT]map[taskIDValueT]*entities.Task)
+	// nowTotalCpuUsage stores the total cumulative cpu usage for each running task.
+	var nowTotalCpuUsage = make(map[string]map[string]float64)
 
 	// Parse Prometheus metrics.
-	// TODO (pkaushi1) make efficient and parallelize parsing of Prometheus metrics.
-	for _, sampleStream := range matrix {
-		// Not considering task for ranking if < 2 data points retrieved.
-		if len(sampleStream.Values) < 2 {
-			continue
-		}
-
+	// TODO (pradykaushik) make efficient and parallelize parsing of Prometheus metrics.
+	for _, sample := range vector {
 		var hostname model.LabelValue
-		var colocatedTasksCpuUsageSeconds map[taskIDValueT]*entities.Task
-		if hostname, ok = sampleStream.Metric[s.dedicatedLabelNameTaskHostname]; ok {
-			if colocatedTasksCpuUsageSeconds, ok = allTasksCpuUsageSeconds[hostValueT(hostname)]; !ok {
+		if hostname, ok = sample.Metric[s.dedicatedLabelNameTaskHostname]; ok {
+			if _, ok = s.previousTotalCpuUsage[string(hostname)]; !ok {
 				// First time fetching metrics from this host.
-				colocatedTasksCpuUsageSeconds = make(map[taskIDValueT]*entities.Task)
-				allTasksCpuUsageSeconds[hostValueT(hostname)] = colocatedTasksCpuUsageSeconds
+				s.previousTotalCpuUsage[string(hostname)] = make(map[string]*taskCpuUsageInfo)
+			}
+
+			if _, ok = nowTotalCpuUsage[string(hostname)]; !ok {
+				// Creating entry to record current total cumulative cpu usage for colocated tasks.
+				nowTotalCpuUsage[string(hostname)] = make(map[string]float64)
 			}
 
 			var taskID model.LabelValue
-			var taskCpuUsage *entities.Task
-			if taskID, ok = sampleStream.Metric[s.dedicatedLabelNameTaskID]; ok {
-				if taskCpuUsage, ok = colocatedTasksCpuUsageSeconds[taskIDValueT(taskID)]; !ok {
+			if taskID, ok = sample.Metric[s.dedicatedLabelNameTaskID]; ok {
+				if taskTotalCpuUsage, ok := s.previousTotalCpuUsage[string(hostname)][string(taskID)]; !ok {
 					// First time fetching metrics for task. Recording taskID and hostname to help consolidation.
-					taskCpuUsage = &entities.Task{
-						Metric:   sampleStream.Metric,
-						Weight:   0.0,
-						ID:       string(taskID),
-						Hostname: string(hostname),
+					taskTotalCpuUsage = &taskCpuUsageInfo{
+						task: &entities.Task{
+							Metric:   sample.Metric,
+							Weight:   0.0,
+							ID:       string(taskID),
+							Hostname: string(hostname),
+						},
+						prevTotalCpuUsageTask: nil,
 					}
 
-					colocatedTasksCpuUsageSeconds[taskIDValueT(taskID)] = taskCpuUsage
-				}
-
-				if _, ok = sampleStream.Metric[cpuLabelName]; ok {
-					// Calculating and recording the cpu utilization (%) of this task on this cpu.
-					// Adding it to an accumulator that will later be used as the cpu utilization of
-					// this task across all cpus.
-					taskCpuUsage.Weight += s.cpuUtil(sampleStream.Values)
+					s.previousTotalCpuUsage[string(hostname)][string(taskID)] = taskTotalCpuUsage
+					// Recording cumulative cpu usage seconds for task on cpu.
+					nowTotalCpuUsage[string(hostname)][string(taskID)] = float64(sample.Value)
 				} else {
-					// CPU usage data does not correspond to a particular cpu.
-					// TODO do not ignore this. We should instead log this.
+					// Adding cumulative cpu usage seconds for task on a cpu.
+					nowTotalCpuUsage[string(hostname)][string(taskID)] += float64(sample.Value)
 				}
+			} else {
+				// Either taskID not exported along with the metrics, or
+				// Task ID dedicated label provided is incorrect.
+				// TODO do not ignore this. We should log this instead.
 			}
 		} else {
 			// Either hostname not exported along with the metrics, or
@@ -140,10 +146,19 @@ func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 	// Rank colocated tasks in non-increasing order based on their total cpu utilization (%)
 	// on the entire host (all cpus).
 	rankedTasks := make(entities.RankedTasks)
-	for hostname, colocatedTasksCpuUsageSeconds := range allTasksCpuUsageSeconds {
-		for _, taskCpuUsage := range colocatedTasksCpuUsageSeconds {
-			taskCpuUsage.Weight = s.round(taskCpuUsage.Weight)
-			rankedTasks[entities.Hostname(hostname)] = append(rankedTasks[entities.Hostname(hostname)], *taskCpuUsage)
+	for hostname, colocatedTasksCpuUsageInfo := range s.previousTotalCpuUsage {
+		for taskID, totalCpuUsage := range colocatedTasksCpuUsageInfo {
+			curTotalCpuUsageTask := nowTotalCpuUsage[hostname][taskID]
+			if totalCpuUsage.prevTotalCpuUsageTask != nil {
+				// Calculating the cpu utilization of this task.
+				totalCpuUsage.task.Weight = s.round(s.cpuUtil(*totalCpuUsage.prevTotalCpuUsageTask, curTotalCpuUsageTask))
+				rankedTasks[entities.Hostname(hostname)] = append(rankedTasks[entities.Hostname(hostname)], *totalCpuUsage.task)
+				totalCpuUsage.prevTotalCpuUsageTask = &curTotalCpuUsageTask
+			} else {
+				// We only have a single data point for task.
+				// Saving it for future use.
+				totalCpuUsage.prevTotalCpuUsageTask = &curTotalCpuUsageTask
+			}
 		}
 
 		// Sorting colocated tasks.
@@ -154,7 +169,9 @@ func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 	}
 
 	// Submitting ranked tasks to the receiver.
-	s.receiver.Receive(rankedTasks)
+	if len(rankedTasks) > 0 {
+		s.receiver.Receive(rankedTasks)
+	}
 }
 
 // cpuUtilPrecision defines the precision for cpu utilization (%) values.
@@ -169,12 +186,9 @@ func (s TaskRankCpuUtilStrategy) round(cpuUtil float64) float64 {
 }
 
 // cpuUtil calculates and returns the cpu utilization (%) for the task.
-// Elapsed time is calculated as the number of seconds between oldest and newest value by
-// factoring in the prometheus scrape interval.
-func (s TaskRankCpuUtilStrategy) cpuUtil(values []model.SamplePair) float64 {
-	n := len(values)
-	return 100.0 * ((float64(values[n-1].Value) - float64(values[0].Value)) /
-		(float64(n-1) * s.prometheusScrapeInterval.Seconds()))
+// Prometheus scrape interval is used as the elapsed time.
+func (s TaskRankCpuUtilStrategy) cpuUtil(prevTotalCpuUsage float64, nowTotalCpuUsage float64) float64 {
+	return 100.0 * ((nowTotalCpuUsage - prevTotalCpuUsage) / s.prometheusScrapeInterval.Seconds())
 }
 
 // GetMetric returns the name of the metric to query.
@@ -218,19 +232,8 @@ func (s TaskRankCpuUtilStrategy) GetLabelMatchers() []*query.LabelMatcher {
 // GetRange returns the time unit and duration for how far back (in seconds) values need to be fetched.
 func (s TaskRankCpuUtilStrategy) GetRange() (query.TimeUnit, uint) {
 	return s.rangeTimeUnit, s.rangeQty
-	// return query.Seconds, uint(5 * int(s.prometheusScrapeInterval.Seconds()))
 }
 
 // SetRange sets the time duration for the range query.
-// For cpu-util ranking strategy the time duration has to be > 1s as you need two data points to calculate cpu utilization.
-// If the provided time duration <= 1s, the default duration of 5 intervals of time is used, where each
-// interval of time is equal to the prometheus scrape interval.
-func (s *TaskRankCpuUtilStrategy) SetRange(timeUnit query.TimeUnit, qty uint) {
-	if !timeUnit.IsValid() || ((timeUnit == query.Seconds) && qty <= 1) {
-		s.rangeTimeUnit = query.Seconds
-		s.rangeQty = uint(5 * int(s.prometheusScrapeInterval.Seconds()))
-	} else {
-		s.rangeTimeUnit = timeUnit
-		s.rangeQty = qty
-	}
-}
+// As this strategy does not use range queries a call to this method results in a NO-OP.
+func (s *TaskRankCpuUtilStrategy) SetRange(_ query.TimeUnit, _ uint) {}
