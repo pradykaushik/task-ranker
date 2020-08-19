@@ -97,11 +97,3 @@ func WithTaskRanksReceiver(receiver TaskRanksReceiver) Option {
 		return nil
 	}
 }
-
-// WithPrometheusScrapeInterval returns an option that initializes the prometheus scrape interval.
-func WithPrometheusScrapeInterval(prometheusScrapeInterval time.Duration) Option {
-	return func(strategy Interface) error {
-		strategy.SetPrometheusScrapeInterval(prometheusScrapeInterval)
-		return nil
-	}
-}

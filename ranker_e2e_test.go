@@ -51,10 +51,11 @@ func initTaskRanker(strategy string) (*TaskRanker, error) {
 	tRanker, err = New(
 		WithDataFetcher(prometheusDataFetcher),
 		WithSchedule("?/5 * * * * *"),
+		WithPrometheusScrapeInterval(1*time.Second),
 		WithStrategy(strategy, []*query.LabelMatcher{
 			{Type: query.TaskID, Label: "container_label_task_id", Operator: query.EqualRegex, Value: "hello_.*"},
 			{Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"},
-		}, dummyReceiver, 1*time.Second))
+		}, dummyReceiver))
 
 	return tRanker, err
 }
@@ -74,13 +75,12 @@ func initTaskRankerOptions(strategy string) (*TaskRanker, error) {
 	tRanker, err = New(
 		WithDataFetcher(prometheusDataFetcher),
 		WithSchedule("?/5 * * * * *"),
+		WithPrometheusScrapeInterval(1*time.Second),
 		WithStrategyOptions(strategy,
 			strategies.WithLabelMatchers([]*query.LabelMatcher{
 				{Type: query.TaskID, Label: "container_label_task_id", Operator: query.EqualRegex, Value: "hello_.*"},
 				{Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"}}),
-			strategies.WithTaskRanksReceiver(dummyReceiver),
-			strategies.WithPrometheusScrapeInterval(1*time.Second),
-			strategies.WithRange(query.Seconds, 5)))
+			strategies.WithTaskRanksReceiver(dummyReceiver)))
 
 	return tRanker, err
 

@@ -99,7 +99,8 @@ func mockConstCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.Lab
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu00",
 			},
-			Value: model.SampleValue(0.225 * (elapsedTime + 1)),
+			Value:     model.SampleValue(0.225 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -107,7 +108,8 @@ func mockConstCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.Lab
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu01",
 			},
-			Value: model.SampleValue(0.225 * (elapsedTime + 1)),
+			Value:     model.SampleValue(0.225 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -115,7 +117,8 @@ func mockConstCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.Lab
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu00",
 			},
-			Value: model.SampleValue(0.3 * (elapsedTime + 1)),
+			Value:     model.SampleValue(0.3 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -123,7 +126,8 @@ func mockConstCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.Lab
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu01",
 			},
-			Value: model.SampleValue(0.3 * (elapsedTime + 1)),
+			Value:     model.SampleValue(0.3 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -131,7 +135,8 @@ func mockConstCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.Lab
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu00",
 			},
-			Value: model.SampleValue(0.675 * (elapsedTime + 1)),
+			Value:     model.SampleValue(0.675 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -139,7 +144,8 @@ func mockConstCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.Lab
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu01",
 			},
-			Value: model.SampleValue(0.675 * (elapsedTime + 1)),
+			Value:     model.SampleValue(0.675 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 	})
 	elapsedTime++
@@ -167,7 +173,8 @@ func mockVaryingCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.L
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  availableCpus[rand.Intn(2)],
 			},
-			Value: model.SampleValue(0.45 * (elapsedTime + 1)),
+			Value:     model.SampleValue(0.45 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -175,7 +182,8 @@ func mockVaryingCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.L
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  availableCpus[rand.Intn(2)],
 			},
-			Value: model.SampleValue(0.6 * (elapsedTime + 1)),
+			Value:     model.SampleValue(0.6 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -183,7 +191,8 @@ func mockVaryingCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.L
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu00",
 			},
-			Value: model.SampleValue(0.9 * (elapsedTime + 1)),
+			Value:     model.SampleValue(0.9 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -191,7 +200,8 @@ func mockVaryingCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.L
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu01",
 			},
-			Value: model.SampleValue(0.45 * (elapsedTime + 1)),
+			Value:     model.SampleValue(0.45 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 	})
 	elapsedTime++

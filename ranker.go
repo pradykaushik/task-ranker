@@ -43,6 +43,8 @@ type TaskRanker struct {
 	runner *cron.Cron
 	// termCh is a channel used to signal the task ranker to stop.
 	termCh *util.SignalChannel
+	// prometheusScrapeInterval corresponds to the time interval between two successive metrics scrapes.
+	prometheusScrapeInterval time.Duration
 }
 
 func New(options ...Option) (*TaskRanker, error) {
@@ -52,6 +54,16 @@ func New(options ...Option) (*TaskRanker, error) {
 			return nil, errors.Wrap(err, "failed to create task ranker")
 		}
 	}
+	// validate task ranker schedule to be a multiple of prometheus scrape interval.
+	now := time.Now()
+	nextTimeTRankerSchedule := tRanker.Schedule.Next(now)
+	tRankerScheduleIntervalSeconds := int(nextTimeTRankerSchedule.Sub(now).Seconds())
+	if (tRankerScheduleIntervalSeconds < int(tRanker.prometheusScrapeInterval.Seconds())) ||
+		(tRankerScheduleIntervalSeconds%int(tRanker.prometheusScrapeInterval.Seconds())) != 0 {
+		return nil, errors.New("task ranker schedule (in seconds) should be a multiple of prometheus scrape interval")
+	}
+	// Providing the prometheus scrape interval to the strategy.
+	tRanker.Strategy.SetPrometheusScrapeInterval(tRanker.prometheusScrapeInterval)
 	tRanker.termCh = util.NewSignalChannel()
 	return tRanker, nil
 }
@@ -68,6 +80,17 @@ func WithDataFetcher(dataFetcher df.Interface) Option {
 	}
 }
 
+// WithPrometheusScrapeInterval returns an option that initializes the prometheus scrape interval.
+func WithPrometheusScrapeInterval(prometheusScrapeInterval time.Duration) Option {
+	return func(tRanker *TaskRanker) error {
+		if prometheusScrapeInterval == 0 {
+			return errors.New("invalid prometheus scrape interval: should be > 0")
+		}
+		tRanker.prometheusScrapeInterval = prometheusScrapeInterval
+		return nil
+	}
+}
+
 // WithStrategy builds the task ranking strategy associated with the given name using the provided information.
 // For backwards compatibility, strategies that use range queries will use the default duration. If the time
 // duration for the range query needs to be configured, then use WithStrategyOptions(...) to configure the strategy
@@ -75,8 +98,7 @@ func WithDataFetcher(dataFetcher df.Interface) Option {
 func WithStrategy(
 	strategy string,
 	labelMatchers []*query.LabelMatcher,
-	receiver strategies.TaskRanksReceiver,
-	prometheusScrapeInterval time.Duration) Option {
+	receiver strategies.TaskRanksReceiver) Option {
 
 	return func(tRanker *TaskRanker) error {
 		if strategy == "" {
@@ -89,8 +111,7 @@ func WithStrategy(
 			tRanker.Strategy = s
 			err := strategies.Build(s,
 				strategies.WithLabelMatchers(labelMatchers),
-				strategies.WithTaskRanksReceiver(receiver),
-				strategies.WithPrometheusScrapeInterval(prometheusScrapeInterval))
+				strategies.WithTaskRanksReceiver(receiver))
 			if err != nil {
 				return errors.Wrap(err, "failed to build strategy")
 			}

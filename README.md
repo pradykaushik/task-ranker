@@ -74,6 +74,8 @@ tRanker, err = New(
         {Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"},
     }, new(dummyTaskRanksReceiver), 1*time.Second))
 ```
+**The task ranker schedule (in seconds) SHOULD be a positive multiple of the prometheus scrape interval. This simplifies the calculation
+of the time difference between data points fetched from successive query executions.**
 
 You can now also configure the strategies using initialization [options](./strategies/strategy.go). This also allows for 
 configuring the time duration of range queries, enabling fine-grained control over the number of data points
@@ -82,7 +84,6 @@ over which the strategy is applied. See below code snippet for strategy configur
 WithStrategyOptions("dummyStrategy",
     strategies.WithLabelMatchers([]*query.LabelMatcher{...}
     strategies.WithTaskRanksReceiver(new(testTaskRanksReceiver)),
-    strategies.WithPrometheusScrapeInterval(...),
     strategies.WithRange(query.Seconds, 5)))
 ```
 _Note: Currently, none of the strategies implemented (**cpushares** and **cpuutil**) support range queries._

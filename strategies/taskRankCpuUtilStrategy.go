@@ -14,6 +14,7 @@
 package strategies
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/entities"
 	"github.com/pradykaushik/task-ranker/query"
@@ -54,8 +55,26 @@ type TaskRankCpuUtilStrategy struct {
 }
 
 type taskCpuUsageInfo struct {
-	task                  *entities.Task
-	prevTotalCpuUsageTask *float64
+	task      *entities.Task
+	dataPoint *cpuUsageDataPoint
+}
+
+type cpuUsageDataPoint struct {
+	totalCumulativeCpuUsage float64
+	timestamp               model.Time
+}
+
+func (d cpuUsageDataPoint) String() string {
+	return fmt.Sprintf("cumulativeCpuUsage[%f], Timestamp[%d]", d.totalCumulativeCpuUsage, d.timestamp)
+}
+
+func (c taskCpuUsageInfo) String() string {
+	prev := "nil"
+	if c.dataPoint != nil {
+		prev = fmt.Sprintf("%s", c.dataPoint)
+	}
+
+	return fmt.Sprintf("Weight[%f], Prev[%s]", c.task.Weight, prev)
 }
 
 func (s *TaskRankCpuUtilStrategy) Init() {
@@ -93,7 +112,7 @@ func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 
 	var ok bool
 	// nowTotalCpuUsage stores the total cumulative cpu usage for each running task.
-	var nowTotalCpuUsage = make(map[string]map[string]float64)
+	var nowTotalCpuUsage = make(map[string]map[string]*cpuUsageDataPoint)
 
 	// Parse Prometheus metrics.
 	// TODO (pradykaushik) make efficient and parallelize parsing of Prometheus metrics.
@@ -107,29 +126,35 @@ func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 
 			if _, ok = nowTotalCpuUsage[string(hostname)]; !ok {
 				// Creating entry to record current total cumulative cpu usage for colocated tasks.
-				nowTotalCpuUsage[string(hostname)] = make(map[string]float64)
+				nowTotalCpuUsage[string(hostname)] = make(map[string]*cpuUsageDataPoint)
 			}
 
 			var taskID model.LabelValue
 			if taskID, ok = sample.Metric[s.dedicatedLabelNameTaskID]; ok {
-				if taskTotalCpuUsage, ok := s.previousTotalCpuUsage[string(hostname)][string(taskID)]; !ok {
+				if _, ok := s.previousTotalCpuUsage[string(hostname)][string(taskID)]; !ok {
 					// First time fetching metrics for task. Recording taskID and hostname to help consolidation.
-					taskTotalCpuUsage = &taskCpuUsageInfo{
+					taskTotalCpuUsage := &taskCpuUsageInfo{
 						task: &entities.Task{
 							Metric:   sample.Metric,
 							Weight:   0.0,
 							ID:       string(taskID),
 							Hostname: string(hostname),
 						},
-						prevTotalCpuUsageTask: nil,
+						dataPoint: nil,
 					}
 
 					s.previousTotalCpuUsage[string(hostname)][string(taskID)] = taskTotalCpuUsage
+				}
+
+				if _, ok := nowTotalCpuUsage[string(hostname)][string(taskID)]; !ok {
 					// Recording cumulative cpu usage seconds for task on cpu.
-					nowTotalCpuUsage[string(hostname)][string(taskID)] = float64(sample.Value)
+					nowTotalCpuUsage[string(hostname)][string(taskID)] = &cpuUsageDataPoint{
+						totalCumulativeCpuUsage: float64(sample.Value),
+						timestamp:               sample.Timestamp,
+					}
 				} else {
 					// Adding cumulative cpu usage seconds for task on a cpu.
-					nowTotalCpuUsage[string(hostname)][string(taskID)] += float64(sample.Value)
+					nowTotalCpuUsage[string(hostname)][string(taskID)].totalCumulativeCpuUsage += float64(sample.Value)
 				}
 			} else {
 				// Either taskID not exported along with the metrics, or
@@ -147,18 +172,22 @@ func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 	// on the entire host (all cpus).
 	rankedTasks := make(entities.RankedTasks)
 	for hostname, colocatedTasksCpuUsageInfo := range s.previousTotalCpuUsage {
-		for taskID, totalCpuUsage := range colocatedTasksCpuUsageInfo {
-			curTotalCpuUsageTask := nowTotalCpuUsage[hostname][taskID]
-			if totalCpuUsage.prevTotalCpuUsageTask != nil {
-				// Calculating the cpu utilization of this task.
-				totalCpuUsage.task.Weight = s.round(s.cpuUtil(*totalCpuUsage.prevTotalCpuUsageTask, curTotalCpuUsageTask))
-				rankedTasks[entities.Hostname(hostname)] = append(rankedTasks[entities.Hostname(hostname)], *totalCpuUsage.task)
-				totalCpuUsage.prevTotalCpuUsageTask = &curTotalCpuUsageTask
+		for taskID, prevTotalCpuUsage := range colocatedTasksCpuUsageInfo {
+			if prevTotalCpuUsage.dataPoint == nil {
+				prevTotalCpuUsage.dataPoint = new(cpuUsageDataPoint)
 			} else {
-				// We only have a single data point for task.
-				// Saving it for future use.
-				totalCpuUsage.prevTotalCpuUsageTask = &curTotalCpuUsageTask
+				// Calculating the cpu utilization of this task.
+				prevTotalCpuUsage.task.Weight = s.round(s.cpuUtil(
+					prevTotalCpuUsage.dataPoint.totalCumulativeCpuUsage,
+					prevTotalCpuUsage.dataPoint.timestamp,
+					nowTotalCpuUsage[hostname][taskID].totalCumulativeCpuUsage,
+					nowTotalCpuUsage[hostname][taskID].timestamp,
+				))
+				rankedTasks[entities.Hostname(hostname)] = append(rankedTasks[entities.Hostname(hostname)], *prevTotalCpuUsage.task)
 			}
+			// Saving current total cumulative cpu usage seconds to calculate cpu utilization in the next interval.
+			prevTotalCpuUsage.dataPoint.totalCumulativeCpuUsage = nowTotalCpuUsage[hostname][taskID].totalCumulativeCpuUsage
+			prevTotalCpuUsage.dataPoint.timestamp = nowTotalCpuUsage[hostname][taskID].timestamp
 		}
 
 		// Sorting colocated tasks.
@@ -186,9 +215,17 @@ func (s TaskRankCpuUtilStrategy) round(cpuUtil float64) float64 {
 }
 
 // cpuUtil calculates and returns the cpu utilization (%) for the task.
-// Prometheus scrape interval is used as the elapsed time.
-func (s TaskRankCpuUtilStrategy) cpuUtil(prevTotalCpuUsage float64, nowTotalCpuUsage float64) float64 {
-	return 100.0 * ((nowTotalCpuUsage - prevTotalCpuUsage) / s.prometheusScrapeInterval.Seconds())
+// The time difference (in seconds) of the two data points is used as the elapsed time. Note that this okay
+// as the task ranker schedule (in seconds) is a multiple of the prometheus scrape interval.
+func (s TaskRankCpuUtilStrategy) cpuUtil(
+	prevTotalCpuUsage float64,
+	prevTotalCpuUsageTimestamp model.Time,
+	nowTotalCpuUsage float64,
+	nowTotalCpuUsageTimestamp model.Time) float64 {
+
+	// timestamps are in milliseconds and therefore dividing by 1000 to convert to seconds.
+	timeDiffSeconds := float64(nowTotalCpuUsageTimestamp-prevTotalCpuUsageTimestamp) / 1000
+	return 100.0 * ((nowTotalCpuUsage - prevTotalCpuUsage) / timeDiffSeconds)
 }
 
 // GetMetric returns the name of the metric to query.
