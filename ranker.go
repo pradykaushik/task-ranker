@@ -15,6 +15,7 @@
 package taskranker
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	df "github.com/pradykaushik/task-ranker/datafetcher"
 	"github.com/pradykaushik/task-ranker/query"
@@ -54,13 +55,20 @@ func New(options ...Option) (*TaskRanker, error) {
 			return nil, errors.Wrap(err, "failed to create task ranker")
 		}
 	}
+
+	// checking if schedule provided.
+	if tRanker.Schedule == nil {
+		return nil, errors.New("invalid schedule provided for task ranker")
+	}
+
 	// validate task ranker schedule to be a multiple of prometheus scrape interval.
 	now := time.Now()
 	nextTimeTRankerSchedule := tRanker.Schedule.Next(now)
 	tRankerScheduleIntervalSeconds := int(nextTimeTRankerSchedule.Sub(now).Seconds())
 	if (tRankerScheduleIntervalSeconds < int(tRanker.prometheusScrapeInterval.Seconds())) ||
 		(tRankerScheduleIntervalSeconds%int(tRanker.prometheusScrapeInterval.Seconds())) != 0 {
-		return nil, errors.New("task ranker schedule (in seconds) should be a multiple of prometheus scrape interval")
+		return nil, errors.New(fmt.Sprintf("task ranker schedule (%d seconds) should be a multiple of " +
+			"prometheus scrape interval (%d seconds)", tRankerScheduleIntervalSeconds, tRanker.prometheusScrapeInterval))
 	}
 	// Providing the prometheus scrape interval to the strategy.
 	tRanker.Strategy.SetPrometheusScrapeInterval(tRanker.prometheusScrapeInterval)
