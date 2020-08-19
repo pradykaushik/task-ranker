@@ -66,8 +66,8 @@ func New(options ...Option) (*TaskRanker, error) {
 	nextTimeTRankerSchedule := tRanker.Schedule.Next(now)
 	tRankerScheduleIntervalSeconds := int(nextTimeTRankerSchedule.Sub(now).Seconds())
 	if (tRankerScheduleIntervalSeconds < int(tRanker.prometheusScrapeInterval.Seconds())) ||
-		(tRankerScheduleIntervalSeconds%int(tRanker.prometheusScrapeInterval.Seconds())) != 0 {
-		return nil, errors.New(fmt.Sprintf("task ranker schedule (%d seconds) should be a multiple of " +
+		((tRankerScheduleIntervalSeconds % int(tRanker.prometheusScrapeInterval.Seconds())) != 0) {
+		return nil, errors.New(fmt.Sprintf("task ranker schedule (%d seconds) should be a multiple of "+
 			"prometheus scrape interval (%d seconds)", tRankerScheduleIntervalSeconds, tRanker.prometheusScrapeInterval))
 	}
 	// Providing the prometheus scrape interval to the strategy.
