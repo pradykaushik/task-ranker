@@ -20,12 +20,9 @@ const (
 	taskRankingResultsLogFilePrefix = "task_ranking_results"
 	// Giving everyone read and write permissions to the log files.
 	logFilePermissions = 0666
-
-	// log types.
-	taskRankerLog = iota
-	rankingResultsLog
 )
 
+// instantiating a Logger to be used. This instance is configured and maintained locally.
 var log = logrus.New()
 
 // createTaskRankerLogFile creates the log file to which task ranker logs are persisted.
@@ -51,6 +48,9 @@ func createTaskRankingResultsLogFile(now time.Time) (*os.File, error) {
 var taskRankerLogFile *os.File
 var taskRankingResultsLogFile *os.File
 
+// Configure the logger. To be prevented task ranker logs from mixing with the logs of the application
+// that is using it, logging to the console is disabled and instead hooks that redirect logs to corresponding
+// log files are attached to the logger.
 func Configure() error {
 	// Disabling log to stdout.
 	log.SetOutput(ioutil.Discard)
@@ -71,7 +71,6 @@ func Configure() error {
 	}
 
 	// Instantiate the hooks.
-	// Using JSONFormatter to simplify parsing.
 	jsonFormatter := &logrus.JSONFormatter{
 		DisableHTMLEscape: true,
 		TimestampFormat:   timestampFormat,
