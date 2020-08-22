@@ -89,7 +89,7 @@ func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 	allTasksCpuUsageSeconds := make(map[hostValueT]map[taskIDValueT]*entities.Task)
 
 	// Parse Prometheus metrics.
-	// TODO (pkaushi1) make efficient and parallelize parsing of Prometheus metrics.
+	// TODO (pradykaushik) make efficient and parallelize parsing of Prometheus metrics.
 	for _, sampleStream := range matrix {
 		// Not considering task for ranking if < 2 data points retrieved.
 		if len(sampleStream.Values) < 2 {
