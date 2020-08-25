@@ -153,7 +153,7 @@ Once finished testing, tear down the test environment by running [`./tear_down_t
 Task Ranker uses [logrus](https://github.com/sirupsen/logrus) for logging. To prevent logs from Task Ranker
 mixing in with logs from the application that is using it, console logging is disabled.
 There are [two types of logs](./logger/logger.go) as mentioned below. 
-1. Task Ranker logs - These logs are Task Ranker specific and correspond functioning of the library. 
+1. Task Ranker logs - These logs are Task Ranker specific and correspond to functioning of the library. 
     These logs are written to a file named **_task\_ranker\_logs\_\<timestamp\>.log_**.
 2. Task Ranking Results logs - These are the results of task ranking using one of task ranking strategies.
     These logs are written to a file named **_task\_ranking\_results\_\<timestamp\>.log_**. To simplify parsing

@@ -20,7 +20,7 @@ import (
 	"io"
 )
 
-// WriterHook is a hook that writes logs, that contain the at least one of the specified set of topics
+// WriterHook is a hook that writes logs, that contain at least one of the specified set of topics
 // as keys in its fields, to the specified Writer. The logs are formatted using the specified formatter.
 type WriterHook struct {
 	formatter logrus.Formatter

@@ -39,28 +39,30 @@ const (
 // instantiating a Logger to be used. This instance is configured and maintained locally.
 var log = logrus.New()
 
+var taskRankerLogFile *os.File
+var taskRankingResultsLogFile *os.File
+
 // createTaskRankerLogFile creates the log file to which task ranker logs are persisted.
-func createTaskRankerLogFile(now time.Time) (*os.File, error) {
+func createTaskRankerLogFile(now time.Time) error {
+	var err error
 	filename := fmt.Sprintf("%s_%v.log", taskRankerLogFilePrefix, now.UnixNano())
-	taskRankerLogFile, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, logFilePermissions)
+	taskRankerLogFile, err = os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, logFilePermissions)
 	if err != nil {
 		err = errors.Wrap(err, "failed to create task ranker operations log file")
 	}
-	return taskRankerLogFile, err
+	return err
 }
 
 // createTaskRankingResultsLogFile creates the log file to which task ranking results are persisted.
-func createTaskRankingResultsLogFile(now time.Time) (*os.File, error) {
+func createTaskRankingResultsLogFile(now time.Time) error {
+	var err error
 	filename := fmt.Sprintf("%s_%v.log", taskRankingResultsLogFilePrefix, now.UnixNano())
-	taskRankingResultsLogFile, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, logFilePermissions)
+	taskRankingResultsLogFile, err = os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, logFilePermissions)
 	if err != nil {
 		err = errors.Wrap(err, "failed to create task ranker log file")
 	}
-	return taskRankingResultsLogFile, err
+	return err
 }
-
-var taskRankerLogFile *os.File
-var taskRankingResultsLogFile *os.File
 
 // Configure the logger. To be prevented task ranker logs from mixing with the logs of the application
 // that is using it, logging to the console is disabled and instead hooks that redirect logs to corresponding
@@ -75,12 +77,10 @@ func Configure() error {
 	now := time.Now()
 	var err error
 
-	taskRankerLogFile, err = createTaskRankerLogFile(now)
-	if err != nil {
+	if err = createTaskRankerLogFile(now); err != nil {
 		return err
 	}
-	taskRankingResultsLogFile, err = createTaskRankingResultsLogFile(now)
-	if err != nil {
+	if err = createTaskRankingResultsLogFile(now); err != nil {
 		return err
 	}
 
