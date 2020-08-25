@@ -74,31 +74,19 @@ tRanker, err = New(
         {Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"},
     }, new(dummyTaskRanksReceiver), 1*time.Second))
 ```
+**The task ranker schedule (in seconds) SHOULD be a positive multiple of the prometheus scrape interval. This simplifies the calculation
+of the time difference between data points fetched from successive query executions.**
 
-You can now also configure the strategies using initialization [options](./strategies/strategy.go). This allows for 
+You can now also configure the strategies using initialization [options](./strategies/strategy.go). This also allows for 
 configuring the time duration of range queries, enabling fine-grained control over the number of data points
-over which the strategy is applied. See below example for strategy configuration using options.
+over which the strategy is applied. See below code snippet for strategy configuration using options.
 ```go
-type dummyTaskRanksReceiver struct{}
-
-func (r *dummyTaskRanksReceiver) Receive(rankedTasks entities.RankedTasks) {
-	log.Println(rankedTasks)
-}
-
-prometheusDataFetcher, err = prometheus.NewDataFetcher(
-    prometheus.WithPrometheusEndpoint("http://localhost:9090"))
-
-tRanker, err = New(
-    WithDataFetcher(prometheusDataFetcher),
-    WithSchedule("?/5 * * * * *"),
-    WithStrategyOptions("cpuutil",
-        strategies.WithLabelMatchers([]*query.LabelMatcher{
-            {Type: query.TaskID, Label: "container_label_task_id", Operator: query.NotEqual, Value: ""},
-            {Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"}}),
-        strategies.WithTaskRanksReceiver(new(dummyTaskRanksReceiver)),
-        strategies.WithPrometheusScrapeInterval(1*time.Second),
-        strategies.WithRange(query.Seconds, 5)))
+WithStrategyOptions("dummyStrategy",
+    strategies.WithLabelMatchers([]*query.LabelMatcher{...}
+    strategies.WithTaskRanksReceiver(new(testTaskRanksReceiver)),
+    strategies.WithRange(query.Seconds, 5)))
 ```
+_Note: Currently, none of the strategies implemented (**cpushares** and **cpuutil**) support range queries._
 
 ##### Dedicated Label Matchers
 Dedicated Label Matchers can be used to retrieve the task ID and host information from data retrieved
@@ -160,3 +148,13 @@ HOST = localhost
 
 #### Tear-Down
 Once finished testing, tear down the test environment by running [`./tear_down_test_env`](./tear_down_test_env).
+
+### Logs
+Task Ranker uses [logrus](https://github.com/sirupsen/logrus) for logging. To prevent logs from Task Ranker
+mixing in with logs from the application that is using it, console logging is disabled.
+There are [two types of logs](./logger/logger.go) as mentioned below. 
+1. Task Ranker logs - These logs are Task Ranker specific and correspond to functioning of the library. 
+    These logs are written to a file named **_task\_ranker\_logs\_\<timestamp\>.log_**.
+2. Task Ranking Results logs - These are the results of task ranking using one of task ranking strategies.
+    These logs are written to a file named **_task\_ranking\_results\_\<timestamp\>.log_**. To simplify parsing
+    these logs are written in JSON format.

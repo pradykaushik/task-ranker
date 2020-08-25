@@ -69,8 +69,8 @@ func TestTaskRankCpuUtilStrategy_GetRange(t *testing.T) {
 
 	checkRange := func(strategy *TaskRankCpuUtilStrategy) {
 		timeUnit, qty := strategy.GetRange()
-		assert.Equal(t, query.Seconds, timeUnit)
-		assert.Equal(t, uint(5), qty)
+		assert.Equal(t, query.None, timeUnit)
+		assert.Equal(t, uint(0), qty)
 	}
 
 	count := 5
@@ -81,30 +81,26 @@ func TestTaskRankCpuUtilStrategy_GetRange(t *testing.T) {
 	}
 }
 
-// mockCpuUtilData returns a mock of prometheus time series data.
+var elapsedTime float64 = 0
+
+// mockConstCpuUtilData returns a mock of prometheus time series data.
 // This mock has the following information.
 // 1. Three tasks with ids 'test_task_id_{1..3}'.
 // 2. Hostname for all tasks is localhost.
 // 3. For each task, cpu usage data is provided for two cpus, 'cpu00' and 'cpu01'.
-// 4. task with id 'test_task_id_1' shows cpu utilization of 22.5% on each cpu.
-// 5. task with id 'test_task_id_2' shows cpu utilization of 30% on each cpu.
-// 6. task with id 'test_task_id_3' shows cpu utilization of 67.5% on each cpu.
-func mockCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelName) model.Value {
-	now := time.Now()
-	return model.Value(model.Matrix{
+// 4. task with id 'test_task_id_1' demonstrates cpu utilization of 22.5% on each cpu.
+// 5. task with id 'test_task_id_2' demonstrates cpu utilization of 30% on each cpu.
+// 6. task with id 'test_task_id_3' demonstrates cpu utilization of 67.5% on each cpu.
+func mockConstCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelName) (mockedCpuUtilData model.Value) {
+	mockedCpuUtilData = model.Value(model.Vector{
 		{
 			Metric: map[model.LabelName]model.LabelValue{
 				dedicatedLabelTaskID:   "test_task_id_1",
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu00",
 			},
-			Values: []model.SamplePair{
-				{Timestamp: model.Time(now.Unix()), Value: 0.5},
-				{Timestamp: model.Time(now.Add(1 * time.Second).Unix()), Value: 0.8},
-				{Timestamp: model.Time(now.Add(2 * time.Second).Unix()), Value: 1.1},
-				{Timestamp: model.Time(now.Add(3 * time.Second).Unix()), Value: 1.3},
-				{Timestamp: model.Time(now.Add(4 * time.Second).Unix()), Value: 1.4},
-			},
+			Value:     model.SampleValue(0.225 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -112,13 +108,8 @@ func mockCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelNam
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu01",
 			},
-			Values: []model.SamplePair{
-				{Timestamp: model.Time(now.Unix()), Value: 0.5},
-				{Timestamp: model.Time(now.Add(1 * time.Second).Unix()), Value: 0.8},
-				{Timestamp: model.Time(now.Add(2 * time.Second).Unix()), Value: 1.1},
-				{Timestamp: model.Time(now.Add(3 * time.Second).Unix()), Value: 1.3},
-				{Timestamp: model.Time(now.Add(4 * time.Second).Unix()), Value: 1.4},
-			},
+			Value:     model.SampleValue(0.225 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -126,13 +117,8 @@ func mockCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelNam
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu00",
 			},
-			Values: []model.SamplePair{
-				{Timestamp: model.Time(now.Unix()), Value: 0.5},
-				{Timestamp: model.Time(now.Add(1 * time.Second).Unix()), Value: 0.9},
-				{Timestamp: model.Time(now.Add(2 * time.Second).Unix()), Value: 1.3},
-				{Timestamp: model.Time(now.Add(3 * time.Second).Unix()), Value: 1.5},
-				{Timestamp: model.Time(now.Add(4 * time.Second).Unix()), Value: 1.7},
-			},
+			Value:     model.SampleValue(0.3 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -140,13 +126,8 @@ func mockCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelNam
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu01",
 			},
-			Values: []model.SamplePair{
-				{Timestamp: model.Time(now.Unix()), Value: 0.5},
-				{Timestamp: model.Time(now.Add(1 * time.Second).Unix()), Value: 0.9},
-				{Timestamp: model.Time(now.Add(2 * time.Second).Unix()), Value: 1.3},
-				{Timestamp: model.Time(now.Add(3 * time.Second).Unix()), Value: 1.5},
-				{Timestamp: model.Time(now.Add(4 * time.Second).Unix()), Value: 1.7},
-			},
+			Value:     model.SampleValue(0.3 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -154,13 +135,8 @@ func mockCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelNam
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu00",
 			},
-			Values: []model.SamplePair{
-				{Timestamp: model.Time(now.Unix()), Value: 0.3},
-				{Timestamp: model.Time(now.Add(1 * time.Second).Unix()), Value: 0.9},
-				{Timestamp: model.Time(now.Add(2 * time.Second).Unix()), Value: 1.6},
-				{Timestamp: model.Time(now.Add(3 * time.Second).Unix()), Value: 2.5},
-				{Timestamp: model.Time(now.Add(4 * time.Second).Unix()), Value: 3.0},
-			},
+			Value:     model.SampleValue(0.675 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 		{
 			Metric: map[model.LabelName]model.LabelValue{
@@ -168,15 +144,68 @@ func mockCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelNam
 				dedicatedLabelTaskHost: "localhost",
 				"cpu":                  "cpu01",
 			},
-			Values: []model.SamplePair{
-				{Timestamp: model.Time(now.Unix()), Value: 0.3},
-				{Timestamp: model.Time(now.Add(1 * time.Second).Unix()), Value: 0.9},
-				{Timestamp: model.Time(now.Add(2 * time.Second).Unix()), Value: 1.6},
-				{Timestamp: model.Time(now.Add(3 * time.Second).Unix()), Value: 2.5},
-				{Timestamp: model.Time(now.Add(4 * time.Second).Unix()), Value: 3.0},
-			},
+			Value:     model.SampleValue(0.675 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
 		},
 	})
+	elapsedTime++
+	return
+}
+
+var availableCpus = map[int]model.LabelValue{
+	0: "cpu00",
+	1: "cpu01",
+}
+
+// mockVaryingCpuUtilData returns a mock of prometheus time series data.
+// This mock has the following information.
+// 1. Three tasks with ids 'test_task_id_{1..3}'.
+// 2. Hostname for all tasks is localhost.
+// 3. For each task, cpu usage data is provided for a subset of the two cpus, 'cpu00' and 'cpu01'.
+// 4. task with id 'test_task_id_1' demonstrates total cpu utilization of 45%.
+// 5. task with id 'test_task_id_2' demonstrates total cpu utilization of 60%.
+// 6. task with id 'test_task_id_3' demonstrates total cpu utilization of 135%.
+func mockVaryingCpuUtilData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelName) (mockedCpuUtilData model.Value) {
+	mockedCpuUtilData = model.Value(model.Vector{
+		{
+			Metric: map[model.LabelName]model.LabelValue{
+				dedicatedLabelTaskID:   "test_task_id_1",
+				dedicatedLabelTaskHost: "localhost",
+				"cpu":                  availableCpus[rand.Intn(2)],
+			},
+			Value:     model.SampleValue(0.45 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
+		},
+		{
+			Metric: map[model.LabelName]model.LabelValue{
+				dedicatedLabelTaskID:   "test_task_id_2",
+				dedicatedLabelTaskHost: "localhost",
+				"cpu":                  availableCpus[rand.Intn(2)],
+			},
+			Value:     model.SampleValue(0.6 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
+		},
+		{
+			Metric: map[model.LabelName]model.LabelValue{
+				dedicatedLabelTaskID:   "test_task_id_3",
+				dedicatedLabelTaskHost: "localhost",
+				"cpu":                  "cpu00",
+			},
+			Value:     model.SampleValue(0.9 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
+		},
+		{
+			Metric: map[model.LabelName]model.LabelValue{
+				dedicatedLabelTaskID:   "test_task_id_3",
+				dedicatedLabelTaskHost: "localhost",
+				"cpu":                  "cpu01",
+			},
+			Value:     model.SampleValue(0.45 * (elapsedTime + 1)),
+			Timestamp: model.Time(1000 * (elapsedTime + 1)),
+		},
+	})
+	elapsedTime++
+	return
 }
 
 func TestTaskRankCpuUtilStrategy_Execute(t *testing.T) {
@@ -193,9 +222,6 @@ func TestTaskRankCpuUtilStrategy_Execute(t *testing.T) {
 	}
 	s.Init()
 
-	data := mockCpuUtilData("container_label_task_id", "container_label_task_host")
-	s.Execute(data)
-
 	expectedRankedTasks := map[entities.Hostname][]entities.Task{
 		"localhost": {
 			{
@@ -206,7 +232,8 @@ func TestTaskRankCpuUtilStrategy_Execute(t *testing.T) {
 				},
 				ID:       "test_task_id_3",
 				Hostname: "localhost",
-				Weight:   135.0, // sum of cpu util (%) on cpu00 and cpu01.
+				// Expected sum of cpu util (%) on cpu00 and cpu01.
+				Weight: 135.0,
 			},
 			{
 				Metric: map[model.LabelName]model.LabelValue{
@@ -216,7 +243,8 @@ func TestTaskRankCpuUtilStrategy_Execute(t *testing.T) {
 				},
 				ID:       "test_task_id_2",
 				Hostname: "localhost",
-				Weight:   60.0, // sum of cpu util (%) on cpu00 and cpu01.
+				// Expected sum of cpu util (%) on cpu00 and cpu01.
+				Weight: 60.0,
 			},
 			{
 				Metric: map[model.LabelName]model.LabelValue{
@@ -226,16 +254,47 @@ func TestTaskRankCpuUtilStrategy_Execute(t *testing.T) {
 				},
 				ID:       "test_task_id_1",
 				Hostname: "localhost",
-				Weight:   45.0, // sum of cpu util (%) on cpu00 and cpu01.
+				// Expected sum of cpu util (%) on cpu00 and cpu01.
+				Weight: 45.0,
 			},
 		},
 	}
 
-	assert.Equal(t, len(expectedRankedTasks), len(receiver.rankedTasks))
+	t.Run("tasks demonstrate constant cpu usage and use all cpus", func(t *testing.T) {
+		for i := 0; i < 5; i++ {
+			data := mockConstCpuUtilData("container_label_task_id", "container_label_task_host")
+			s.Execute(data)
 
-	_, ok := expectedRankedTasks["localhost"]
-	_, localhostIsInRankedTasks := receiver.rankedTasks["localhost"]
-	assert.True(t, ok == localhostIsInRankedTasks)
+			if i == 0 {
+				// No ranked tasks yet as we only have one second of data.
+				assert.Empty(t, receiver.rankedTasks)
+				continue
+			}
 
-	assert.ElementsMatch(t, expectedRankedTasks["localhost"], receiver.rankedTasks["localhost"])
+			assert.Equal(t, len(expectedRankedTasks), len(receiver.rankedTasks))
+
+			_, ok := expectedRankedTasks["localhost"]
+			_, localhostIsInRankedTasks := receiver.rankedTasks["localhost"]
+			assert.True(t, ok == localhostIsInRankedTasks)
+
+			assert.ElementsMatch(t, expectedRankedTasks["localhost"], receiver.rankedTasks["localhost"])
+		}
+
+	})
+
+	t.Run("tasks demonstrate varying cpu usage and do not run on all cpus", func(t *testing.T) {
+		for i := 0; i < 5; i++ { // Starting from 5 to simulate cumulative cpu usage from previous test.
+			data := mockVaryingCpuUtilData("container_label_task_id", "container_label_task_host")
+			s.Execute(data)
+
+			assert.Equal(t, len(expectedRankedTasks), len(receiver.rankedTasks))
+
+			_, ok := expectedRankedTasks["localhost"]
+			_, localhostIsInRankedTasks := receiver.rankedTasks["localhost"]
+			assert.True(t, ok == localhostIsInRankedTasks)
+
+			assert.ElementsMatch(t, expectedRankedTasks["localhost"], receiver.rankedTasks["localhost"])
+		}
+
+	})
 }

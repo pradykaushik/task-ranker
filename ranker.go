@@ -15,14 +15,16 @@
 package taskranker
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	df "github.com/pradykaushik/task-ranker/datafetcher"
+	"github.com/pradykaushik/task-ranker/logger"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/pradykaushik/task-ranker/strategies"
 	"github.com/pradykaushik/task-ranker/strategies/factory"
 	"github.com/pradykaushik/task-ranker/util"
 	"github.com/robfig/cron/v3"
-	"log"
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -43,6 +45,8 @@ type TaskRanker struct {
 	runner *cron.Cron
 	// termCh is a channel used to signal the task ranker to stop.
 	termCh *util.SignalChannel
+	// prometheusScrapeInterval corresponds to the time interval between two successive metrics scrapes.
+	prometheusScrapeInterval time.Duration
 }
 
 func New(options ...Option) (*TaskRanker, error) {
@@ -52,8 +56,34 @@ func New(options ...Option) (*TaskRanker, error) {
 			return nil, errors.Wrap(err, "failed to create task ranker")
 		}
 	}
+
+	// checking if schedule provided.
+	if tRanker.Schedule == nil {
+		return nil, errors.New("invalid schedule provided for task ranker")
+	}
+
+	// validate task ranker schedule to be a multiple of prometheus scrape interval.
+	now := time.Unix(50000, 50000)
+	nextTimeTRankerSchedule := tRanker.Schedule.Next(now)
+	tRankerScheduleIntervalSeconds := int(nextTimeTRankerSchedule.Sub(now).Seconds())
+	if (tRankerScheduleIntervalSeconds < int(tRanker.prometheusScrapeInterval.Seconds())) ||
+		((tRankerScheduleIntervalSeconds % int(tRanker.prometheusScrapeInterval.Seconds())) != 0) {
+		return nil, errors.New(fmt.Sprintf("task ranker schedule (%d seconds) should be a multiple of "+
+			"prometheus scrape interval (%d seconds)", tRankerScheduleIntervalSeconds, int(tRanker.prometheusScrapeInterval.Seconds())))
+	}
+	// Providing the prometheus scrape interval to the strategy.
+	tRanker.Strategy.SetPrometheusScrapeInterval(tRanker.prometheusScrapeInterval)
 	tRanker.termCh = util.NewSignalChannel()
-	return tRanker, nil
+
+	// Configuring logger.
+	err := logger.Configure()
+	if err != nil {
+		err = errors.Wrap(err, "failed to configure logger")
+		if err = logger.Done(); err != nil {
+			err = errors.Wrap(err, "failed to shutdown logger")
+		}
+	}
+	return tRanker, err
 }
 
 type Option func(*TaskRanker) error
@@ -68,6 +98,17 @@ func WithDataFetcher(dataFetcher df.Interface) Option {
 	}
 }
 
+// WithPrometheusScrapeInterval returns an option that initializes the prometheus scrape interval.
+func WithPrometheusScrapeInterval(prometheusScrapeInterval time.Duration) Option {
+	return func(tRanker *TaskRanker) error {
+		if prometheusScrapeInterval == 0 {
+			return errors.New("invalid prometheus scrape interval: should be > 0")
+		}
+		tRanker.prometheusScrapeInterval = prometheusScrapeInterval
+		return nil
+	}
+}
+
 // WithStrategy builds the task ranking strategy associated with the given name using the provided information.
 // For backwards compatibility, strategies that use range queries will use the default duration. If the time
 // duration for the range query needs to be configured, then use WithStrategyOptions(...) to configure the strategy
@@ -75,8 +116,7 @@ func WithDataFetcher(dataFetcher df.Interface) Option {
 func WithStrategy(
 	strategy string,
 	labelMatchers []*query.LabelMatcher,
-	receiver strategies.TaskRanksReceiver,
-	prometheusScrapeInterval time.Duration) Option {
+	receiver strategies.TaskRanksReceiver) Option {
 
 	return func(tRanker *TaskRanker) error {
 		if strategy == "" {
@@ -89,8 +129,7 @@ func WithStrategy(
 			tRanker.Strategy = s
 			err := strategies.Build(s,
 				strategies.WithLabelMatchers(labelMatchers),
-				strategies.WithTaskRanksReceiver(receiver),
-				strategies.WithPrometheusScrapeInterval(prometheusScrapeInterval))
+				strategies.WithTaskRanksReceiver(receiver))
 			if err != nil {
 				return errors.Wrap(err, "failed to build strategy")
 			}
@@ -134,6 +173,9 @@ func WithSchedule(specString string) Option {
 }
 
 func (tRanker *TaskRanker) Start() {
+	logger.WithFields(logrus.Fields{
+		"stage": "task-ranker",
+	}).Log(logrus.InfoLevel, "starting task ranker cron job")
 	tRanker.runner = cron.New(cron.WithSeconds())
 	tRanker.runner.Schedule(tRanker.Schedule, tRanker)
 	tRanker.runner.Start()
@@ -145,13 +187,22 @@ func (tRanker *TaskRanker) Run() {
 	}
 	result, err := tRanker.DataFetcher.Fetch()
 	if err != nil {
-		log.Println(err.Error())
+		logger.WithFields(logrus.Fields{
+			"stage": "data-fetcher",
+		}).Log(logrus.ErrorLevel, err.Error())
 	} else {
 		tRanker.Strategy.Execute(result)
 	}
 }
 
 func (tRanker *TaskRanker) Stop() {
+	logger.WithFields(logrus.Fields{
+		"stage": "task-ranker",
+	}).Log(logrus.InfoLevel, "stopping task ranker cron job")
 	tRanker.termCh.Close()
 	tRanker.runner.Stop()
+	err := logger.Done()
+	if err != nil {
+		fmt.Printf("failed to shutdown logger: %v", err)
+	}
 }

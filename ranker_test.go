@@ -15,12 +15,14 @@
 package taskranker
 
 import (
+	"github.com/pradykaushik/task-ranker/datafetcher"
 	"github.com/pradykaushik/task-ranker/datafetcher/prometheus"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/pradykaushik/task-ranker/strategies"
 	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func TestNew(t *testing.T) {
@@ -50,7 +52,48 @@ func TestNew(t *testing.T) {
 		tRanker, initErr := initTaskRankerOptions("cpushares")
 		test(tRanker, initErr)
 		timeUnit, qty := tRanker.Strategy.GetRange()
-		assert.Equal(t, query.Seconds, timeUnit)
-		assert.Equal(t, uint(5), qty)
+		assert.Equal(t, query.None, timeUnit)
+		assert.Equal(t, uint(0), qty)
+	})
+}
+
+func TestNew_InvalidSchedule(t *testing.T) {
+	var prometheusDataFetcher datafetcher.Interface
+	var err error
+	var tRanker *TaskRanker
+
+	prometheusDataFetcher, err = prometheus.NewDataFetcher(
+		prometheus.WithPrometheusEndpoint("http://localhost:9090"))
+	assert.NoError(t, err, "failed to instantiate data fetcher")
+
+	dummyReceiver = new(dummyTaskRanksReceiver)
+	t.Run("schedule (in seconds) < prometheus scrape interval", func(t *testing.T) {
+		// Setting the task ranker schedule to every 3 seconds (< 5 seconds).
+		tRanker, err = New(
+			WithDataFetcher(prometheusDataFetcher),
+			WithSchedule("?/3 * * * * *"),
+			WithPrometheusScrapeInterval(5*time.Second),
+			WithStrategyOptions("cpushares",
+				strategies.WithLabelMatchers([]*query.LabelMatcher{
+					{Type: query.TaskID, Label: "container_label_task_id", Operator: query.EqualRegex, Value: "hello_.*"},
+					{Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"}}),
+				strategies.WithTaskRanksReceiver(dummyReceiver)))
+		assert.Error(t, err, "task ranker schedule validation failed")
+		assert.Nil(t, tRanker, "task ranker instantiated with invalid schedule")
+	})
+
+	t.Run("task ranker schedule (in seconds) is not a positive multiple of prometheus scrape interval", func(t *testing.T) {
+		// Setting the task ranker schedule to every 7 seconds (not a positive multiple of 5).
+		tRanker, err = New(
+			WithDataFetcher(prometheusDataFetcher),
+			WithSchedule("?/7 * * * * *"),
+			WithPrometheusScrapeInterval(5*time.Second),
+			WithStrategyOptions("cpushares",
+				strategies.WithLabelMatchers([]*query.LabelMatcher{
+					{Type: query.TaskID, Label: "container_label_task_id", Operator: query.EqualRegex, Value: "hello_.*"},
+					{Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"}}),
+				strategies.WithTaskRanksReceiver(dummyReceiver)))
+		assert.Error(t, err, "task ranker schedule validation failed")
+		assert.Nil(t, tRanker, "task ranker instantiated with invalid schedule")
 	})
 }
