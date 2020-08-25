@@ -18,11 +18,13 @@ import (
 	"context"
 	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/datafetcher"
+	"github.com/pradykaushik/task-ranker/logger"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/pradykaushik/task-ranker/strategies"
 	"github.com/prometheus/client_golang/api"
 	"github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 )
@@ -94,7 +96,7 @@ func (f *DataFetcher) Fetch() (result model.Value, err error) {
 	var client api.Client
 	client, err = api.NewClient(api.Config{Address: f.endpoint})
 	if err != nil {
-		err = errors.Wrap(err, "failed to fetch data from prometheus")
+		err = errors.Wrap(err, "failed to create prometheus client")
 		return
 	}
 	v1Api := v1.NewAPI(client)
@@ -102,5 +104,12 @@ func (f *DataFetcher) Fetch() (result model.Value, err error) {
 	defer cancel()
 	// TODO do not ignore warnings. maybe log them?
 	result, _, err = v1Api.Query(ctx, queryString, time.Now())
+	if err == nil {
+		logger.WithFields(logrus.Fields{
+			"stage":        "data-fetcher",
+			"query":        queryString,
+			"query_result": result,
+		}).Log(logrus.InfoLevel, "data fetched")
+	}
 	return
 }

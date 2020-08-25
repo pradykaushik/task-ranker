@@ -18,12 +18,13 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	df "github.com/pradykaushik/task-ranker/datafetcher"
+	"github.com/pradykaushik/task-ranker/logger"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/pradykaushik/task-ranker/strategies"
 	"github.com/pradykaushik/task-ranker/strategies/factory"
 	"github.com/pradykaushik/task-ranker/util"
 	"github.com/robfig/cron/v3"
-	"log"
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -73,7 +74,16 @@ func New(options ...Option) (*TaskRanker, error) {
 	// Providing the prometheus scrape interval to the strategy.
 	tRanker.Strategy.SetPrometheusScrapeInterval(tRanker.prometheusScrapeInterval)
 	tRanker.termCh = util.NewSignalChannel()
-	return tRanker, nil
+
+	// Configuring logger.
+	err := logger.Configure()
+	if err != nil {
+		err = errors.Wrap(err, "failed to configure logger")
+		if err = logger.Done(); err != nil {
+			err = errors.Wrap(err, "failed to shutdown logger")
+		}
+	}
+	return tRanker, err
 }
 
 type Option func(*TaskRanker) error
@@ -163,6 +173,9 @@ func WithSchedule(specString string) Option {
 }
 
 func (tRanker *TaskRanker) Start() {
+	logger.WithFields(logrus.Fields{
+		"stage": "task-ranker",
+	}).Log(logrus.InfoLevel, "starting task ranker cron job")
 	tRanker.runner = cron.New(cron.WithSeconds())
 	tRanker.runner.Schedule(tRanker.Schedule, tRanker)
 	tRanker.runner.Start()
@@ -174,13 +187,22 @@ func (tRanker *TaskRanker) Run() {
 	}
 	result, err := tRanker.DataFetcher.Fetch()
 	if err != nil {
-		log.Println(err.Error())
+		logger.WithFields(logrus.Fields{
+			"stage": "data-fetcher",
+		}).Log(logrus.ErrorLevel, err.Error())
 	} else {
 		tRanker.Strategy.Execute(result)
 	}
 }
 
 func (tRanker *TaskRanker) Stop() {
+	logger.WithFields(logrus.Fields{
+		"stage": "task-ranker",
+	}).Log(logrus.InfoLevel, "stopping task ranker cron job")
 	tRanker.termCh.Close()
 	tRanker.runner.Stop()
+	err := logger.Done()
+	if err != nil {
+		fmt.Printf("failed to shutdown logger: %v", err)
+	}
 }

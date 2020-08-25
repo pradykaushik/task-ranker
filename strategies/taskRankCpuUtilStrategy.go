@@ -17,8 +17,10 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/entities"
+	"github.com/pradykaushik/task-ranker/logger"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/prometheus/common/model"
+	"github.com/sirupsen/logrus"
 	"math"
 	"sort"
 	"time"
@@ -199,6 +201,10 @@ func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 
 	// Submitting ranked tasks to the receiver.
 	if len(rankedTasks) > 0 {
+		logger.WithFields(logrus.Fields{
+			"task_ranking_strategy": "cpuutil",
+			"task_ranking_results":  rankedTasks,
+		}).Log(logrus.InfoLevel, "strategy executed")
 		s.receiver.Receive(rankedTasks)
 	}
 }
