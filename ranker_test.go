@@ -67,6 +67,37 @@ func TestNew_InvalidSchedule(t *testing.T) {
 	assert.NoError(t, err, "failed to instantiate data fetcher")
 
 	dummyReceiver = new(dummyTaskRanksReceiver)
+	t.Run("schedule (in seconds) = 0", func(t *testing.T) {
+		// Setting the task ranker schedule to be 0.
+		tRanker, err = New(
+			WithDataFetcher(prometheusDataFetcher),
+			WithSchedule("?/0 * * * * *"),
+			WithPrometheusScrapeInterval(1*time.Second),
+			WithStrategyOptions("cpushares",
+				strategies.WithLabelMatchers([]*query.LabelMatcher{
+					{Type: query.TaskID, Label: "container_label_task_id", Operator: query.EqualRegex, Value: "hello_.*"},
+					{Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"}}),
+				strategies.WithTaskRanksReceiver(dummyReceiver)))
+		assert.Error(t, err, "task ranker schedule validation failed")
+		assert.Nil(t, tRanker, "task ranker instantiated with invalid schedule")
+	})
+
+	t.Run("schedule (in seconds) = prometheus scrape interval = 1", func(t *testing.T) {
+		// Setting the task ranker schedule to every 1 second.
+		// Setting the prometheus scrape interval to 1 second.
+		tRanker, err = New(
+			WithDataFetcher(prometheusDataFetcher),
+			WithSchedule("?/1 * * * * *"),
+			WithPrometheusScrapeInterval(1*time.Second),
+			WithStrategyOptions("cpushares",
+				strategies.WithLabelMatchers([]*query.LabelMatcher{
+					{Type: query.TaskID, Label: "container_label_task_id", Operator: query.EqualRegex, Value: "hello_.*"},
+					{Type: query.TaskHostname, Label: "container_label_task_host", Operator: query.Equal, Value: "localhost"}}),
+				strategies.WithTaskRanksReceiver(dummyReceiver)))
+		assert.NoError(t, err, "task ranker schedule validation failed")
+		assert.NotNil(t, tRanker, "task ranker not instantiated in-spite of valid configuration")
+	})
+
 	t.Run("schedule (in seconds) < prometheus scrape interval", func(t *testing.T) {
 		// Setting the task ranker schedule to every 3 seconds (< 5 seconds).
 		tRanker, err = New(
