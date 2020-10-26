@@ -63,7 +63,7 @@ func New(options ...Option) (*TaskRanker, error) {
 	}
 
 	// validate task ranker schedule to be a multiple of prometheus scrape interval.
-	now := time.Unix(50000, 50000)
+	now := time.Unix(0, 0)
 	nextTimeTRankerSchedule := tRanker.Schedule.Next(now)
 	tRankerScheduleIntervalSeconds := int(nextTimeTRankerSchedule.Sub(now).Seconds())
 	if (tRankerScheduleIntervalSeconds < int(tRanker.prometheusScrapeInterval.Seconds())) ||
