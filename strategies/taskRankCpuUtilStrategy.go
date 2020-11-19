@@ -52,6 +52,7 @@ type TaskRankCpuUtilStrategy struct {
 	// On the other hand, if the tasks are not pinned, then there is no guarantee that the necessary number of data points be available
 	// as the cpu scheduler can preempt and re-schedule the task on any available cpu.
 	// Therefore, to avoid confusion, this strategy does not use the range query.
+	// TODO (pkaushi1) get rid of this eventually.
 	rangeTimeUnit query.TimeUnit
 	rangeQty      uint
 }
@@ -113,7 +114,7 @@ func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 	}
 
 	var ok bool
-	// nowTotalCpuUsage stores the total cumulative cpu usage for each running task.
+	// Stores the total cumulative cpu usage for each running task.
 	var nowTotalCpuUsage = make(map[string]map[string]*cpuUsageDataPoint)
 
 	// Parse Prometheus metrics.
@@ -172,6 +173,9 @@ func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 
 	// Rank colocated tasks in non-increasing order based on their total cpu utilization (%)
 	// on the entire host (all cpus).
+
+	// TODO (pradykaushik) Change below code to work with cpu usage information received now. This will reduce #iterations.
+	// TODO (pradykaushik) Periodically drain previousTotalCpuUsage to prevent it from growing indefinitely.
 	rankedTasks := make(entities.RankedTasks)
 	for hostname, colocatedTasksCpuUsageInfo := range s.previousTotalCpuUsage {
 		for taskID, prevTotalCpuUsage := range colocatedTasksCpuUsageInfo {
