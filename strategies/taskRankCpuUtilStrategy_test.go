@@ -98,6 +98,25 @@ var availableCpus = map[int]model.LabelValue{
 	1: "cpu01",
 }
 
+// getMockDataSample returns a data sample mimicking cpu_usage_seconds information
+// retrieved for a single task from prometheus.
+func getMockDataSample(
+	dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelName,
+	taskID, hostname, cpu model.LabelValue,
+	cumulativeCpuUsageSeconds float64,
+	timestamp float64) *model.Sample {
+
+	return &model.Sample{
+		Metric: map[model.LabelName]model.LabelValue{
+			dedicatedLabelTaskID: taskID,
+			dedicatedLabelTaskHost: hostname,
+			"cpu": cpu,
+		},
+		Value: model.SampleValue(cumulativeCpuUsageSeconds),
+		Timestamp: model.Time(timestamp),
+	}
+}
+
 // mockCpuUtilDataAlwaysUsingAllCpus returns a mock of prometheus time series data.
 // This mock is useful to test scenarios where tasks are N-level parallel (N >= #cpus) and use up all the cpus all the time.
 //
@@ -109,62 +128,20 @@ var availableCpus = map[int]model.LabelValue{
 // 5. task with id 'test_task_id_2' demonstrates cpu utilization of 30% on each cpu.
 // 6. task with id 'test_task_id_3' demonstrates cpu utilization of 67.5% on each cpu.
 func mockCpuUtilDataAlwaysUsingAllCpus(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelName) (mockedCpuUtilData model.Value) {
-	mockedCpuUtilData = model.Value(model.Vector{
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   uniqueTaskSets[0][0],
-				dedicatedLabelTaskHost: hostname,
-				"cpu":                  availableCpus[0],
-			},
-			Value:     model.SampleValue(0.225 * (elapsedTimeSeconds + 1)),
-			Timestamp: model.Time(1000 * (elapsedTimeSeconds + 1)),
-		},
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   uniqueTaskSets[0][0],
-				dedicatedLabelTaskHost: hostname,
-				"cpu":                  availableCpus[1],
-			},
-			Value:     model.SampleValue(0.225 * (elapsedTimeSeconds + 1)),
-			Timestamp: model.Time(1000 * (elapsedTimeSeconds + 1)),
-		},
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   uniqueTaskSets[0][1],
-				dedicatedLabelTaskHost: hostname,
-				"cpu":                  availableCpus[0],
-			},
-			Value:     model.SampleValue(0.3 * (elapsedTimeSeconds + 1)),
-			Timestamp: model.Time(1000 * (elapsedTimeSeconds + 1)),
-		},
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   uniqueTaskSets[0][1],
-				dedicatedLabelTaskHost: hostname,
-				"cpu":                  availableCpus[1],
-			},
-			Value:     model.SampleValue(0.3 * (elapsedTimeSeconds + 1)),
-			Timestamp: model.Time(1000 * (elapsedTimeSeconds + 1)),
-		},
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   uniqueTaskSets[0][2],
-				dedicatedLabelTaskHost: hostname,
-				"cpu":                  availableCpus[0],
-			},
-			Value:     model.SampleValue(0.675 * (elapsedTimeSeconds + 1)),
-			Timestamp: model.Time(1000 * (elapsedTimeSeconds + 1)),
-		},
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   uniqueTaskSets[0][2],
-				dedicatedLabelTaskHost: hostname,
-				"cpu":                  availableCpus[1],
-			},
-			Value:     model.SampleValue(0.675 * (elapsedTimeSeconds + 1)),
-			Timestamp: model.Time(1000 * (elapsedTimeSeconds + 1)),
-		},
-	})
+	mockedCpuUtilData = model.Vector{
+		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][0], hostname, availableCpus[0],
+			0.225 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][0], hostname, availableCpus[1],
+			0.225 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][1], hostname, availableCpus[0],
+			0.3 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][1], hostname, availableCpus[1],
+			0.3 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][2], hostname, availableCpus[0],
+			0.675 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][2], hostname, availableCpus[1],
+			0.675 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+	}
 	elapsedTimeSeconds++
 	return
 }
@@ -181,44 +158,16 @@ func mockCpuUtilDataAlwaysUsingAllCpus(dedicatedLabelTaskID, dedicatedLabelTaskH
 // 5. task with id 'test_task_id_2' demonstrates total cpu utilization of 60%.
 // 6. task with id 'test_task_id_3' demonstrates total cpu utilization of 135%.
 func mockCpuUtilDataUsingOnlySomeCpus(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelName) (mockedCpuUtilData model.Value) {
-	mockedCpuUtilData = model.Value(model.Vector{
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   uniqueTaskSets[0][0],
-				dedicatedLabelTaskHost: hostname,
-				"cpu":                  availableCpus[0],
-			},
-			Value:     model.SampleValue(0.45 * (elapsedTimeSeconds + 1)),
-			Timestamp: model.Time(1000 * (elapsedTimeSeconds + 1)),
-		},
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   uniqueTaskSets[0][1],
-				dedicatedLabelTaskHost: hostname,
-				"cpu":                  availableCpus[0],
-			},
-			Value:     model.SampleValue(0.6 * (elapsedTimeSeconds + 1)),
-			Timestamp: model.Time(1000 * (elapsedTimeSeconds + 1)),
-		},
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   uniqueTaskSets[0][2],
-				dedicatedLabelTaskHost: hostname,
-				"cpu":                  availableCpus[0],
-			},
-			Value:     model.SampleValue(0.9 * (elapsedTimeSeconds + 1)),
-			Timestamp: model.Time(1000 * (elapsedTimeSeconds + 1)),
-		},
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   uniqueTaskSets[0][2],
-				dedicatedLabelTaskHost: hostname,
-				"cpu":                  availableCpus[1],
-			},
-			Value:     model.SampleValue(0.45 * (elapsedTimeSeconds + 1)),
-			Timestamp: model.Time(1000 * (elapsedTimeSeconds + 1)),
-		},
-	})
+	mockedCpuUtilData = model.Vector{
+		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][0], hostname, availableCpus[0],
+			0.45 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][1], hostname, availableCpus[0],
+			0.6 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][2], hostname, availableCpus[0],
+			0.9 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][2], hostname, availableCpus[1],
+			0.45 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+	}
 	elapsedTimeSeconds++
 	return
 }
@@ -337,92 +286,37 @@ func TestTaskRankCpuUtilStrategy_Execute(t *testing.T) {
 		}
 	})
 
-	t.Run("cpu usage data received for different set of tasks and on a subset of cpus", func(t *testing.T) {
+	t.Run("cpu usage data received for different subsets of cpus", func(t *testing.T) {
 		s.Init() // re-initializing.
 		receiver.rankedTasks = make(entities.RankedTasks)
-		// ROUND 1
+		///////////////////////////////////////////////// ROUND 1 /////////////////////////////////////////////////
+		// CPU usage data received for three active tasks.
 		data := model.Vector{
-			{
-				Metric: map[model.LabelName]model.LabelValue{
-					"container_label_task_id":   uniqueTaskSets[0][0],
-					"container_label_task_host": hostname,
-					"cpu":                       availableCpus[0],
-				},
-				Value:     model.SampleValue(0.45),
-				Timestamp: model.Time(1000),
-			},
-			{
-				Metric: map[model.LabelName]model.LabelValue{
-					"container_label_task_id":   uniqueTaskSets[0][1],
-					"container_label_task_host": hostname,
-					"cpu":                       availableCpus[0],
-				},
-				Value:     model.SampleValue(0.30),
-				Timestamp: model.Time(1000),
-			},
-			{
-				Metric: map[model.LabelName]model.LabelValue{
-					"container_label_task_id":   uniqueTaskSets[0][2],
-					"container_label_task_host": hostname,
-					"cpu":                       availableCpus[0],
-				},
-				Value:     model.SampleValue(0.675),
-				Timestamp: model.Time(1000),
-			},
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][0],
+				hostname, availableCpus[0], 0.45, 1000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][1],
+				hostname, availableCpus[0], 0.30, 1000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][2],
+				hostname, availableCpus[0], 0.675, 1000),
 		}
 
 		s.Execute(data)
 		// No ranked tasks yet as we only have one second of data.
 		assert.Empty(t, receiver.rankedTasks)
 
-		// ROUND 2
-		t.Log("changing the cpu for which cpu usage information is received for a task")
+		///////////////////////////////////////////////// ROUND 2 /////////////////////////////////////////////////
+		// Changing the cpu for which cpu usage information is received for a task.
 		data = model.Vector{
-			{
-				Metric: map[model.LabelName]model.LabelValue{
-					"container_label_task_id":   uniqueTaskSets[0][0],
-					"container_label_task_host": hostname,
-					"cpu":                       availableCpus[1],
-				},
-				Value:     model.SampleValue(0.90),
-				Timestamp: model.Time(2000),
-			},
-			{
-				Metric: map[model.LabelName]model.LabelValue{
-					"container_label_task_id":   uniqueTaskSets[0][1],
-					"container_label_task_host": hostname,
-					"cpu":                       availableCpus[0],
-				},
-				Value:     model.SampleValue(0.30),
-				Timestamp: model.Time(2000),
-			},
-			{
-				Metric: map[model.LabelName]model.LabelValue{
-					"container_label_task_id":   uniqueTaskSets[0][1],
-					"container_label_task_host": hostname,
-					"cpu":                       availableCpus[1],
-				},
-				Value:     model.SampleValue(0.60),
-				Timestamp: model.Time(2000),
-			},
-			{
-				Metric: map[model.LabelName]model.LabelValue{
-					"container_label_task_id":   uniqueTaskSets[0][2],
-					"container_label_task_host": hostname,
-					"cpu":                       availableCpus[0],
-				},
-				Value:     model.SampleValue(1.35),
-				Timestamp: model.Time(2000),
-			},
-			{
-				Metric: map[model.LabelName]model.LabelValue{
-					"container_label_task_id":   uniqueTaskSets[0][2],
-					"container_label_task_host": hostname,
-					"cpu":                       availableCpus[1],
-				},
-				Value:     model.SampleValue(0.675),
-				Timestamp: model.Time(2000),
-			},
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][0],
+				hostname, availableCpus[1], 0.90, 2000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][1],
+				hostname, availableCpus[0], 0.30, 2000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][1],
+				hostname, availableCpus[1], 0.60, 2000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][2],
+				hostname, availableCpus[0], 1.35, 2000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][2],
+				hostname, availableCpus[1], 0.675, 2000),
 		}
 
 		expectedRankedTasks = map[entities.Hostname][]entities.Task{
@@ -469,6 +363,139 @@ func TestTaskRankCpuUtilStrategy_Execute(t *testing.T) {
 
 		_, ok := expectedRankedTasks["localhost"]
 		_, localhostIsInRankedTasks := receiver.rankedTasks["localhost"]
+		assert.True(t, ok == localhostIsInRankedTasks)
+
+		assert.ElementsMatch(t, expectedRankedTasks["localhost"], receiver.rankedTasks["localhost"])
+	})
+
+	t.Run("cpu usage information received after some tasks complete execution new tasks added", func(t *testing.T) {
+		s.Init() // re-initializing.
+		receiver.rankedTasks = make(entities.RankedTasks)
+		///////////////////////////////////////////////// ROUND 1 /////////////////////////////////////////////////
+		// CPU usage information received for three tasks.
+		data := model.Vector{
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][0],
+				hostname, availableCpus[0], 0.45, 1000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][1],
+				hostname, availableCpus[0], 0.30, 1000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][2],
+				hostname, availableCpus[0], 0.675, 1000),
+		}
+
+		s.Execute(data)
+		// No ranked tasks yet as we only have one second of data.
+		assert.Empty(t, receiver.rankedTasks)
+
+		///////////////////////////////////////////////// ROUND 2 /////////////////////////////////////////////////
+		// Changing the cpu for which cpu usage information is received for some tasks.
+		data = model.Vector{
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][0],
+				hostname, availableCpus[1], 0.90, 2000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][1],
+				hostname, availableCpus[0], 0.30, 2000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][1],
+				hostname, availableCpus[1], 0.60, 2000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][2],
+				hostname, availableCpus[0], 1.35, 2000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][2],
+				hostname, availableCpus[1], 0.675, 2000),
+		}
+
+		expectedRankedTasks = map[entities.Hostname][]entities.Task{
+			"localhost": {
+				{
+					Metric: map[model.LabelName]model.LabelValue{
+						"container_label_task_id":   "test_task_id_3",
+						"container_label_task_host": "localhost",
+						"cpu":                       "cpu00",
+					},
+					ID:       "test_task_id_3",
+					Hostname: "localhost",
+					// Expected sum of cpu util (%) on cpu00 and cpu01.
+					Weight: 135.0,
+				},
+				{
+					Metric: map[model.LabelName]model.LabelValue{
+						"container_label_task_id":   "test_task_id_2",
+						"container_label_task_host": "localhost",
+						"cpu":                       "cpu00",
+					},
+					ID:       "test_task_id_2",
+					Hostname: "localhost",
+					// Expected sum of cpu util (%) on cpu00 and cpu01.
+					Weight: 60.0,
+				},
+				{
+					Metric: map[model.LabelName]model.LabelValue{
+						"container_label_task_id":   "test_task_id_1",
+						"container_label_task_host": "localhost",
+						"cpu":                       "cpu00",
+					},
+					ID:       "test_task_id_1",
+					Hostname: "localhost",
+					// Expected sum of cpu util (%) on cpu00 and cpu01.
+					Weight: 45.0,
+				},
+			},
+		}
+
+		s.Execute(data)
+
+		assert.Equal(t, len(expectedRankedTasks), len(receiver.rankedTasks))
+
+		_, ok := expectedRankedTasks["localhost"]
+		_, localhostIsInRankedTasks := receiver.rankedTasks["localhost"]
+		assert.True(t, ok == localhostIsInRankedTasks)
+
+		assert.ElementsMatch(t, expectedRankedTasks["localhost"], receiver.rankedTasks["localhost"])
+
+		///////////////////////////////////////////////// ROUND 3 /////////////////////////////////////////////////
+		// Assuming test_task_id_3 completed execution and a new task was co-located with the still active tasks.
+		data = model.Vector{
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][0],
+				hostname, availableCpus[0], 1.35, 3000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][0],
+				hostname, availableCpus[1], 0.45, 3000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[0][1],
+				hostname, availableCpus[1], 1.5, 3000),
+			getMockDataSample("container_label_task_id", "container_label_task_host", uniqueTaskSets[1][0],
+				hostname, availableCpus[1], 0.70, 3000),
+		}
+
+		// We should only expect cpu utilization data for the still active tasks, excluding the new task.
+		expectedRankedTasks = map[entities.Hostname][]entities.Task{
+			"localhost": {
+				{
+					Metric: map[model.LabelName]model.LabelValue{
+						"container_label_task_id":   uniqueTaskSets[0][0],
+						"container_label_task_host": hostname,
+						"cpu":                       availableCpus[0],
+					},
+					ID:       string(uniqueTaskSets[0][0]),
+					Hostname: string(hostname),
+					// Expected sum of cpu util (%) on cpu00 and cpu01.
+					Weight: 90.0,
+				},
+				{
+					Metric: map[model.LabelName]model.LabelValue{
+						"container_label_task_id":   uniqueTaskSets[0][1],
+						"container_label_task_host": hostname,
+						"cpu":                       availableCpus[0],
+					},
+					ID:       string(uniqueTaskSets[0][1]),
+					Hostname: string(hostname),
+					// Expected sum of cpu util (%) on cpu00 and cpu01.
+					Weight: 60.0,
+				},
+			},
+		}
+
+		s.Execute(data)
+
+		assert.Equal(t, len(expectedRankedTasks), len(receiver.rankedTasks))
+
+		_, ok = expectedRankedTasks["localhost"]
+		_, localhostIsInRankedTasks = receiver.rankedTasks["localhost"]
 		assert.True(t, ok == localhostIsInRankedTasks)
 
 		assert.ElementsMatch(t, expectedRankedTasks["localhost"], receiver.rankedTasks["localhost"])
