@@ -27,7 +27,6 @@ type Builder struct {
 	// List of labels to be used to filter the data. This is an optional field.
 	labelMatchers []*LabelMatcher
 	// The unit of time to use when performing range queries. This is an optional field.
-	// If this field is not initialized, then
 	timeUnit     TimeUnit
 	timeDuration uint
 	// TODO (pradykaushik) support functions.
