@@ -82,41 +82,6 @@ func TestTaskRankCpuUtilStrategy_GetRange(t *testing.T) {
 	}
 }
 
-var elapsedTimeSeconds float64 = 0
-
-const hostname model.LabelValue = "localhost"
-
-// Task IDs to create mocks.
-var uniqueTaskSets = map[int][]model.LabelValue{
-	0: {"test_task_id_1", "test_task_id_2", "test_task_id_3"},
-	1: {"test_task_id_4", "test_task_id_5", "test_task_id_6"},
-	2: {"test_task_id_7", "test_task_id_8", "test_task_id_9"},
-}
-
-var availableCpus = map[int]model.LabelValue{
-	0: "cpu00",
-	1: "cpu01",
-}
-
-// getMockDataSample returns a data sample mimicking cpu_usage_seconds information
-// retrieved for a single task from prometheus.
-func getMockDataSample(
-	dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelName,
-	taskID, hostname, cpu model.LabelValue,
-	cumulativeCpuUsageSeconds float64,
-	timestamp float64) *model.Sample {
-
-	return &model.Sample{
-		Metric: map[model.LabelName]model.LabelValue{
-			dedicatedLabelTaskID: taskID,
-			dedicatedLabelTaskHost: hostname,
-			"cpu": cpu,
-		},
-		Value: model.SampleValue(cumulativeCpuUsageSeconds),
-		Timestamp: model.Time(timestamp),
-	}
-}
-
 // mockCpuUtilDataAlwaysUsingAllCpus returns a mock of prometheus time series data.
 // This mock is useful to test scenarios where tasks are N-level parallel (N >= #cpus) and use up all the cpus all the time.
 //
@@ -130,17 +95,17 @@ func getMockDataSample(
 func mockCpuUtilDataAlwaysUsingAllCpus(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelName) (mockedCpuUtilData model.Value) {
 	mockedCpuUtilData = model.Vector{
 		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][0], hostname, availableCpus[0],
-			0.225 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+			0.225*(elapsedTimeSeconds+1), 1000*(elapsedTimeSeconds+1)),
 		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][0], hostname, availableCpus[1],
-			0.225 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+			0.225*(elapsedTimeSeconds+1), 1000*(elapsedTimeSeconds+1)),
 		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][1], hostname, availableCpus[0],
-			0.3 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+			0.3*(elapsedTimeSeconds+1), 1000*(elapsedTimeSeconds+1)),
 		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][1], hostname, availableCpus[1],
-			0.3 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+			0.3*(elapsedTimeSeconds+1), 1000*(elapsedTimeSeconds+1)),
 		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][2], hostname, availableCpus[0],
-			0.675 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+			0.675*(elapsedTimeSeconds+1), 1000*(elapsedTimeSeconds+1)),
 		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][2], hostname, availableCpus[1],
-			0.675 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+			0.675*(elapsedTimeSeconds+1), 1000*(elapsedTimeSeconds+1)),
 	}
 	elapsedTimeSeconds++
 	return
@@ -160,13 +125,13 @@ func mockCpuUtilDataAlwaysUsingAllCpus(dedicatedLabelTaskID, dedicatedLabelTaskH
 func mockCpuUtilDataUsingOnlySomeCpus(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelName) (mockedCpuUtilData model.Value) {
 	mockedCpuUtilData = model.Vector{
 		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][0], hostname, availableCpus[0],
-			0.45 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+			0.45*(elapsedTimeSeconds+1), 1000*(elapsedTimeSeconds+1)),
 		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][1], hostname, availableCpus[0],
-			0.6 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+			0.6*(elapsedTimeSeconds+1), 1000*(elapsedTimeSeconds+1)),
 		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][2], hostname, availableCpus[0],
-			0.9 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+			0.9*(elapsedTimeSeconds+1), 1000*(elapsedTimeSeconds+1)),
 		getMockDataSample(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][2], hostname, availableCpus[1],
-			0.45 * (elapsedTimeSeconds + 1), 1000 * (elapsedTimeSeconds + 1)),
+			0.45*(elapsedTimeSeconds+1), 1000*(elapsedTimeSeconds+1)),
 	}
 	elapsedTimeSeconds++
 	return
