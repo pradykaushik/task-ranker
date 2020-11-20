@@ -15,7 +15,6 @@ package strategies
 
 import (
 	"github.com/pradykaushik/task-ranker/entities"
-	"github.com/pradykaushik/task-ranker/logger"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
@@ -101,8 +100,6 @@ func TestTaskRankCpuSharesStrategy_Execute(t *testing.T) {
 		dedicatedLabelNameTaskHostname: model.LabelName("container_label_task_host"),
 	}
 	s.Init()
-	// Configuring logger.
-	assert.Nil(t, logger.Configure())
 
 	data := mockCpuSharesData("container_label_task_id", "container_label_task_host")
 	s.Execute(data)
@@ -146,6 +143,4 @@ func TestTaskRankCpuSharesStrategy_Execute(t *testing.T) {
 	assert.True(t, ok == localhostIsInRankedTasks)
 
 	assert.ElementsMatch(t, expectedRankedTasks["localhost"], receiver.rankedTasks["localhost"])
-
-	// logger will be closed after the last test in this package.
 }

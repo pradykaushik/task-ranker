@@ -15,7 +15,6 @@ package strategies
 
 import (
 	"github.com/pradykaushik/task-ranker/entities"
-	"github.com/pradykaushik/task-ranker/logger"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
@@ -154,7 +153,6 @@ func TestTaskRankCpuUtilStrategy_Execute(t *testing.T) {
 		prometheusScrapeInterval:       1 * time.Second,
 	}
 	s.Init()
-	// logger is already configured in the first test in this package.
 
 	expectedRankedTasks := map[entities.Hostname][]entities.Task{
 		"localhost": {
@@ -465,6 +463,4 @@ func TestTaskRankCpuUtilStrategy_Execute(t *testing.T) {
 
 		assert.ElementsMatch(t, expectedRankedTasks["localhost"], receiver.rankedTasks["localhost"])
 	})
-
-	assert.Nil(t, logger.Done())
 }
