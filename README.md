@@ -158,3 +158,6 @@ There are [two types of logs](./logger/logger.go) as mentioned below.
 2. Task Ranking Results logs - These are the results of task ranking using one of task ranking strategies.
     These logs are written to a file named **_task\_ranking\_results\_\<timestamp\>.log_**. To simplify parsing
     these logs are written in JSON format.
+
+### Bare Metal Setup
+Follow instructions [here](./docs/BareMetalSetup.md) to setup Prometheus and cAdvisor on bare-metal.
