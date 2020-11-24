@@ -52,6 +52,7 @@ type TaskRankCpuUtilStrategy struct {
 	// On the other hand, if the tasks are not pinned, then there is no guarantee that the necessary number of data points be available
 	// as the cpu scheduler can preempt and re-schedule the task on any available cpu.
 	// Therefore, to avoid confusion, this strategy does not use the range query.
+	// TODO (pkaushi1) get rid of this eventually.
 	rangeTimeUnit query.TimeUnit
 	rangeQty      uint
 }
@@ -113,7 +114,7 @@ func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 	}
 
 	var ok bool
-	// nowTotalCpuUsage stores the total cumulative cpu usage for each running task.
+	// Stores the total cumulative cpu usage for each running task.
 	var nowTotalCpuUsage = make(map[string]map[string]*cpuUsageDataPoint)
 
 	// Parse Prometheus metrics.
@@ -170,29 +171,31 @@ func (s *TaskRankCpuUtilStrategy) Execute(data model.Value) {
 		}
 	}
 
-	// Rank colocated tasks in non-increasing order based on their total cpu utilization (%)
-	// on the entire host (all cpus).
+	// Rank colocated tasks in non-increasing order based on their total cpu utilization (%) on the entire host (all cpus).
+	// TODO (pradykaushik) Periodically drain previousTotalCpuUsage to prevent it from growing indefinitely.
 	rankedTasks := make(entities.RankedTasks)
-	for hostname, colocatedTasksCpuUsageInfo := range s.previousTotalCpuUsage {
-		for taskID, prevTotalCpuUsage := range colocatedTasksCpuUsageInfo {
-			if prevTotalCpuUsage.dataPoint == nil {
-				prevTotalCpuUsage.dataPoint = new(cpuUsageDataPoint)
+	for hostname, cpuUsageColocatedActiveTasks := range nowTotalCpuUsage {
+		for taskID, totalCpuUsageInfoActiveTask := range cpuUsageColocatedActiveTasks {
+			// calculating cpu utilization if cpu usage information previously recorded.
+			prevRecordedTotalCpuUsage := s.previousTotalCpuUsage[hostname][taskID]
+			if prevRecordedTotalCpuUsage.dataPoint == nil {
+				prevRecordedTotalCpuUsage.dataPoint = new(cpuUsageDataPoint)
 			} else {
-				// Calculating the cpu utilization of this task.
-				prevTotalCpuUsage.task.Weight = s.round(s.cpuUtil(
-					prevTotalCpuUsage.dataPoint.totalCumulativeCpuUsage,
-					prevTotalCpuUsage.dataPoint.timestamp,
-					nowTotalCpuUsage[hostname][taskID].totalCumulativeCpuUsage,
-					nowTotalCpuUsage[hostname][taskID].timestamp,
+				prevRecordedTotalCpuUsage.task.Weight = s.round(s.cpuUtil(
+					prevRecordedTotalCpuUsage.dataPoint.totalCumulativeCpuUsage,
+					prevRecordedTotalCpuUsage.dataPoint.timestamp,
+					totalCpuUsageInfoActiveTask.totalCumulativeCpuUsage,
+					totalCpuUsageInfoActiveTask.timestamp,
 				))
-				rankedTasks[entities.Hostname(hostname)] = append(rankedTasks[entities.Hostname(hostname)], *prevTotalCpuUsage.task)
+				rankedTasks[entities.Hostname(hostname)] = append(rankedTasks[entities.Hostname(hostname)],
+					*prevRecordedTotalCpuUsage.task)
 			}
 			// Saving current total cumulative cpu usage seconds to calculate cpu utilization in the next interval.
-			prevTotalCpuUsage.dataPoint.totalCumulativeCpuUsage = nowTotalCpuUsage[hostname][taskID].totalCumulativeCpuUsage
-			prevTotalCpuUsage.dataPoint.timestamp = nowTotalCpuUsage[hostname][taskID].timestamp
+			prevRecordedTotalCpuUsage.dataPoint.totalCumulativeCpuUsage = totalCpuUsageInfoActiveTask.totalCumulativeCpuUsage
+			prevRecordedTotalCpuUsage.dataPoint.timestamp = totalCpuUsageInfoActiveTask.timestamp
 		}
 
-		// Sorting colocated tasks.
+		// Sorting co-located tasks.
 		sort.SliceStable(rankedTasks[entities.Hostname(hostname)], func(i, j int) bool {
 			return rankedTasks[entities.Hostname(hostname)][i].Weight >=
 				rankedTasks[entities.Hostname(hostname)][j].Weight

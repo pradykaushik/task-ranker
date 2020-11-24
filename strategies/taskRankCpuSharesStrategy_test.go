@@ -78,35 +78,14 @@ func TestTaskRankCpuSharesStrategy_GetRange(t *testing.T) {
 // 5. task with id 'test_task_id_3' is allocated a 3072 cpu shares.
 func mockCpuSharesData(dedicatedLabelTaskID, dedicatedLabelTaskHost model.LabelName) model.Value {
 	now := time.Now()
-	return model.Value(model.Matrix{
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   "test_task_id_1",
-				dedicatedLabelTaskHost: "localhost",
-			},
-			Values: []model.SamplePair{
-				{Timestamp: model.Time(now.Second()), Value: 1024.0},
-			},
-		},
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   "test_task_id_2",
-				dedicatedLabelTaskHost: "localhost",
-			},
-			Values: []model.SamplePair{
-				{Timestamp: model.Time(now.Second()), Value: 2048.0},
-			},
-		},
-		{
-			Metric: map[model.LabelName]model.LabelValue{
-				dedicatedLabelTaskID:   "test_task_id_3",
-				dedicatedLabelTaskHost: "localhost",
-			},
-			Values: []model.SamplePair{
-				{Timestamp: model.Time(now.Second()), Value: 3072.0},
-			},
-		},
-	})
+	return model.Matrix{
+		getMockDataRange(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][0],
+			hostname, model.SamplePair{Timestamp: model.Time(now.Second()), Value: 1024.0}),
+		getMockDataRange(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][1],
+			hostname, model.SamplePair{Timestamp: model.Time(now.Second()), Value: 2048.0}),
+		getMockDataRange(dedicatedLabelTaskID, dedicatedLabelTaskHost, uniqueTaskSets[0][2],
+			hostname, model.SamplePair{Timestamp: model.Time(now.Second()), Value: 3072.0}),
+	}
 }
 
 func TestTaskRankCpuSharesStrategy_Execute(t *testing.T) {
