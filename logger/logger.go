@@ -17,9 +17,11 @@ package logger
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/pradykaushik/task-ranker/logger/topic"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -96,8 +98,20 @@ func Configure() error {
 		TimestampFormat: timestampFormat,
 	}
 
-	log.AddHook(newWriterHook(textFormatter, taskRankerLogFile, "stage", "query", "query_result"))
-	log.AddHook(newWriterHook(jsonFormatter, taskRankingResultsLogFile, "task_ranking_results"))
+	// Reading in list of topics that have been disabled.
+	disabledTopics := make(map[topic.Topic]struct{})
+	if value := os.Getenv(loggingDisablerEnvVar); value != "" {
+		for _, value := range strings.Split(value, delimiter) {
+			if t := topic.FromString(value); t.IsValid() {
+				disabledTopics[t] = struct{}{}
+			}
+		}
+	}
+
+	log.AddHook(newWriterHook(textFormatter, taskRankerLogFile, disabledTopics,
+		topic.Stage, topic.Query, topic.QueryResult))
+	log.AddHook(newWriterHook(jsonFormatter, taskRankingResultsLogFile, disabledTopics,
+		topic.TaskRankingStrategy, topic.TaskRankingResult))
 
 	return nil
 }

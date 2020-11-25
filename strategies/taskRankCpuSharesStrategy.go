@@ -18,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/entities"
 	"github.com/pradykaushik/task-ranker/logger"
+	"github.com/pradykaushik/task-ranker/logger/topic"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
@@ -123,8 +124,8 @@ func (s *TaskRankCpuSharesStrategy) Execute(data model.Value) {
 
 	// Submitting the ranked tasks to the receiver.
 	logger.WithFields(logrus.Fields{
-		"task_ranking_strategy": "cpushares",
-		"task_ranking_results":  tasks,
+		topic.TaskRankingStrategy.String(): "cpushares",
+		topic.TaskRankingResult.String():   tasks,
 	}).Log(logrus.InfoLevel, "strategy executed")
 	s.receiver.Receive(tasks)
 }

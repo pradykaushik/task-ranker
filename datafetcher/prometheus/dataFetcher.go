@@ -19,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/datafetcher"
 	"github.com/pradykaushik/task-ranker/logger"
+	"github.com/pradykaushik/task-ranker/logger/topic"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/pradykaushik/task-ranker/strategies"
 	"github.com/prometheus/client_golang/api"
@@ -106,9 +107,9 @@ func (f *DataFetcher) Fetch() (result model.Value, err error) {
 	result, _, err = v1Api.Query(ctx, queryString, time.Now())
 	if err == nil {
 		logger.WithFields(logrus.Fields{
-			"stage":        "data-fetcher",
-			"query":        queryString,
-			"query_result": result,
+			topic.Stage.String():       "data-fetcher",
+			topic.Query.String():       queryString,
+			topic.QueryResult.String(): result,
 		}).Log(logrus.InfoLevel, "data fetched")
 	}
 	return
