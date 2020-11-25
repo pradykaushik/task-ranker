@@ -159,5 +159,15 @@ There are [two types of logs](./logger/logger.go) as mentioned below.
     These logs are written to a file named **_task\_ranking\_results\_\<timestamp\>.log_**. To simplify parsing
     these logs are written in JSON format.
 
+#### Disable Topics from Task-Ranker Logs
+By default, all topics are enabled for logging.
+We can now also disable topics to be logged. To do this, set an environment variable named `TASK_RANKER_LOGS_DISABLE_TOPICS`
+as shown below.
+```commandline
+export TASK_RANKER_LOGS_DISABLE_TOPICS=topic1,topic2,...
+```
+
+The list of topics available can be viewed [here](./logger/topic/topic.go).
+
 ### Bare Metal Setup
 Follow instructions [here](./docs/BareMetalSetup.md) to setup Prometheus and cAdvisor on bare-metal.
