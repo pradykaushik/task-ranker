@@ -115,6 +115,9 @@ WithStrategy("strategy-name", []*query.LabelMatcher{
 #### Start the Task Ranker
 Once the Task Ranker has been configured, then you can start it by calling `tRanker.Start()`.
 
+#### Stop the Task Ranker
+Call `tRanker.Stop()` to stop the task ranker.
+
 ### Test Locally
 #### Setup
 Run [`./create_test_env`](./create_test_env) to,
