@@ -19,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	df "github.com/pradykaushik/task-ranker/datafetcher"
 	"github.com/pradykaushik/task-ranker/logger"
+	"github.com/pradykaushik/task-ranker/logger/topic"
 	"github.com/pradykaushik/task-ranker/query"
 	"github.com/pradykaushik/task-ranker/strategies"
 	"github.com/pradykaushik/task-ranker/strategies/factory"
@@ -174,7 +175,7 @@ func WithSchedule(specString string) Option {
 
 func (tRanker *TaskRanker) Start() {
 	logger.WithFields(logrus.Fields{
-		"stage": "task-ranker",
+		topic.Stage.String(): "task-ranker",
 	}).Log(logrus.InfoLevel, "starting task ranker cron job")
 	tRanker.runner = cron.New(cron.WithSeconds())
 	tRanker.runner.Schedule(tRanker.Schedule, tRanker)
@@ -188,7 +189,7 @@ func (tRanker *TaskRanker) Run() {
 	result, err := tRanker.DataFetcher.Fetch()
 	if err != nil {
 		logger.WithFields(logrus.Fields{
-			"stage": "data-fetcher",
+			topic.Stage.String(): "data-fetcher",
 		}).Log(logrus.ErrorLevel, err.Error())
 	} else {
 		tRanker.Strategy.Execute(result)
@@ -197,7 +198,7 @@ func (tRanker *TaskRanker) Run() {
 
 func (tRanker *TaskRanker) Stop() {
 	logger.WithFields(logrus.Fields{
-		"stage": "task-ranker",
+		topic.Stage.String(): "task-ranker",
 	}).Log(logrus.InfoLevel, "stopping task ranker cron job")
 	tRanker.termCh.Close()
 	tRanker.runner.Stop()

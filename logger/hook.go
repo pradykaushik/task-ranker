@@ -16,6 +16,7 @@ package logger
 
 import (
 	"github.com/pkg/errors"
+	"github.com/pradykaushik/task-ranker/logger/topic"
 	"github.com/sirupsen/logrus"
 	"io"
 )
@@ -23,20 +24,34 @@ import (
 // WriterHook is a hook that writes logs, that contain at least one of the specified set of topics
 // as keys in its fields, to the specified Writer. The logs are formatted using the specified formatter.
 type WriterHook struct {
-	formatter logrus.Formatter
-	writer    io.Writer
-	topics    map[string]struct{}
+	formatter      logrus.Formatter
+	writer         io.Writer
+	topics         map[topic.Topic]struct{}
+	disabledTopics map[topic.Topic]struct{}
 }
 
+// Environment variable that points to the logs that need to be disabled.
+const loggingDisablerEnvVar = "TASK_RANKER_LOGS_DISABLE_TOPICS"
+
+// Delimiter to be used when providing more than one topic to be disabled.
+const delimiter = ","
+
 // newWriterHook instantiates and returns a new WriterHook.
-func newWriterHook(formatter logrus.Formatter, writer io.Writer, topics ...string) logrus.Hook {
+func newWriterHook(
+	formatter logrus.Formatter,
+	writer io.Writer,
+	disabledTopics map[topic.Topic]struct{},
+	topics ...topic.Topic) logrus.Hook {
+
 	hook := &WriterHook{
-		formatter: formatter,
-		writer:    writer,
-		topics:    make(map[string]struct{}),
+		formatter:      formatter,
+		writer:         writer,
+		topics:         make(map[topic.Topic]struct{}),
+		disabledTopics: disabledTopics,
 	}
-	for _, topic := range topics {
-		hook.topics[topic] = struct{}{}
+
+	for _, t := range topics {
+		hook.topics[t] = struct{}{}
 	}
 
 	return hook
@@ -56,12 +71,19 @@ func (h WriterHook) Levels() []logrus.Level {
 
 // Fire checks whether the fields in the provided entry contain at least one of the specified
 // topics and if yes, formats the entry using the specified formatter and then writes it to the
-// specified Writer.
+// specified Writer. Disabled topics are removed from the entry before logging.
 func (h *WriterHook) Fire(entry *logrus.Entry) error {
+	// Removing disabled topics from the entry.
+	for t := range h.topics {
+		if _, isDisabled := h.disabledTopics[t]; isDisabled {
+			delete(entry.Data, t.String())
+		}
+	}
+
 	// Logging only if any of the provided topics are found as keys in fields.
 	allow := false
-	for topic := range h.topics {
-		if _, ok := entry.Data[topic]; ok {
+	for t := range h.topics {
+		if _, ok := entry.Data[t.String()]; ok {
 			allow = true
 			break
 		}
