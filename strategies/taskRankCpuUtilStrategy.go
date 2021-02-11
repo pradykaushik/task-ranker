@@ -238,10 +238,10 @@ func (s TaskRankCpuUtilStrategy) cpuUtil(
 	return 100.0 * ((nowTotalCpuUsage - prevTotalCpuUsage) / timeDiffSeconds)
 }
 
-// GetMetric returns the name of the metric to query.
-func (s TaskRankCpuUtilStrategy) GetMetric() string {
-	// TODO convert this to constant.
-	return "container_cpu_usage_seconds_total"
+// GetMetrics returns the names of the metrics to query.
+func (s TaskRankCpuUtilStrategy) GetMetrics() []string {
+	// TODO convert metrics to constants.
+	return []string{"container_cpu_usage_seconds_total"}
 }
 
 // SetLabelMatchers sets the label matchers to use when filtering data.

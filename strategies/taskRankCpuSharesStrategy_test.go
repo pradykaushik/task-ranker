@@ -45,7 +45,7 @@ func TestTaskRankCpuSharesStrategy_SetTaskRanksReceiver(t *testing.T) {
 
 func TestTaskRankCpuSharesStrategy_GetMetric(t *testing.T) {
 	s := initCpusharesStrategy()
-	assert.Equal(t, "container_spec_cpu_shares", s.GetMetric())
+	assert.Equal(t, "container_spec_cpu_shares", s.GetMetrics()[0])
 }
 
 func TestTaskRankCpuSharesStrategy_SetLabelMatchers(t *testing.T) {

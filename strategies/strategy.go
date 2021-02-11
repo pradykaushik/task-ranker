@@ -34,7 +34,8 @@ type Interface interface {
 	Execute(model.Value)
 	// GetMetric returns the metric to pull data for.
 	// Note: This has to be a single metric name.
-	GetMetric() string
+	// GetMetric() string
+	GetMetrics() []string
 	// SetLabelMatchers sets the label matchers to use to filter data.
 	// Strategy implementations can perform additional validations on the provided label matchers.
 	SetLabelMatchers([]*query.LabelMatcher) error

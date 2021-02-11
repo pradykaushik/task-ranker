@@ -21,11 +21,12 @@ import (
 
 var testBuilderWithRangeQuery *Builder
 var testBuilderWithoutRangeQuery *Builder
+var testBuilderWithMultipleMetrics *Builder
 
 func TestNewBuilder(t *testing.T) {
 	t.Run("with-range-query", func(t *testing.T) {
 		testBuilderWithRangeQuery = NewBuilder(
-			WithMetric("test_metric"),
+			WithMetrics([]string{"test_metric"}),
 			WithLabelMatchers(
 				&LabelMatcher{
 					Label:    "test_label1",
@@ -40,7 +41,7 @@ func TestNewBuilder(t *testing.T) {
 			WithRange(Seconds, 5))
 
 		assert.NotNil(t, testBuilderWithRangeQuery)
-		assert.Equal(t, "test_metric", testBuilderWithRangeQuery.metric)
+		assert.Equal(t, "test_metric", testBuilderWithRangeQuery.metrics[0])
 		assert.Len(t, testBuilderWithRangeQuery.labelMatchers, 2)
 		assert.ObjectsAreEqualValues(&LabelMatcher{
 			Label:    "test_label1",
@@ -58,7 +59,7 @@ func TestNewBuilder(t *testing.T) {
 
 	t.Run("without-range-query", func(t *testing.T) {
 		testBuilderWithoutRangeQuery = NewBuilder(
-			WithMetric("test_metric"),
+			WithMetrics([]string{"test_metric"}),
 			WithLabelMatchers(
 				&LabelMatcher{
 					Label:    "test_label1",
@@ -73,7 +74,7 @@ func TestNewBuilder(t *testing.T) {
 			WithRange(None, 0))
 
 		assert.NotNil(t, testBuilderWithoutRangeQuery)
-		assert.Equal(t, "test_metric", testBuilderWithoutRangeQuery.metric)
+		assert.Equal(t, "test_metric", testBuilderWithoutRangeQuery.metrics[0])
 		assert.Len(t, testBuilderWithoutRangeQuery.labelMatchers, 2)
 		assert.ObjectsAreEqualValues(&LabelMatcher{
 			Label:    "test_label1",
@@ -88,16 +89,56 @@ func TestNewBuilder(t *testing.T) {
 		assert.Equal(t, None, testBuilderWithoutRangeQuery.timeUnit)
 		assert.Equal(t, uint(0), testBuilderWithoutRangeQuery.timeDuration)
 	})
+
+	t.Run("with-multiple-metrics", func(t *testing.T) {
+		testBuilderWithMultipleMetrics = NewBuilder(
+			WithMetrics([]string{"test_metric1", "test_metric2"}),
+			WithLabelMatchers(
+				&LabelMatcher{
+					Label:    "test_label1",
+					Operator: Equal,
+					Value:    "test_value1",
+				},
+				&LabelMatcher{
+					Label:    "test_label2",
+					Operator: Equal,
+					Value:    "test_value2",
+				}),
+			WithRange(Minutes, 1))
+	})
+
+	assert.NotNil(t, testBuilderWithMultipleMetrics)
+	assert.Len(t, testBuilderWithMultipleMetrics.metrics, 2)
+	assert.Equal(t, "test_metric1", testBuilderWithMultipleMetrics.metrics[0])
+	assert.Equal(t, "test_metric2", testBuilderWithMultipleMetrics.metrics[1])
+	assert.Len(t, testBuilderWithMultipleMetrics.labelMatchers, 2)
+	assert.ObjectsAreEqualValues(&LabelMatcher{
+		Label:    "test_label1",
+		Operator: Equal,
+		Value:    "test_value1",
+	}, testBuilderWithMultipleMetrics.labelMatchers[0])
+	assert.ObjectsAreEqualValues(&LabelMatcher{
+		Label:    "test_label2",
+		Operator: Equal,
+		Value:    "test_value2",
+	}, testBuilderWithMultipleMetrics.labelMatchers[1])
+	assert.Equal(t, Minutes, testBuilderWithMultipleMetrics.timeUnit)
+	assert.Equal(t, uint(1), testBuilderWithMultipleMetrics.timeDuration)
 }
 
 func TestBuilder_BuildQuery(t *testing.T) {
 	t.Run("with-range-query", func(t *testing.T) {
-		const expectedQueryStringWithRange = "test_metric{test_label1=\"test_value1\",test_label2=\"test_value2\"}[5s]"
+		const expectedQueryStringWithRange = "{__name__=\"test_metric\",test_label1=\"test_value1\",test_label2=\"test_value2\"}[5s]"
 		assert.Equal(t, expectedQueryStringWithRange, testBuilderWithRangeQuery.BuildQuery())
 	})
 
 	t.Run("without-range-query", func(t *testing.T) {
-		const expectedQueryStringWithoutRange = "test_metric{test_label1=\"test_value1\",test_label2=\"test_value2\"}"
+		const expectedQueryStringWithoutRange = "{__name__=\"test_metric\",test_label1=\"test_value1\",test_label2=\"test_value2\"}"
 		assert.Equal(t, expectedQueryStringWithoutRange, testBuilderWithoutRangeQuery.BuildQuery())
+	})
+
+	t.Run("with-multiple-metrics-range-query", func(t *testing.T) {
+		const expectedQueryStringWithMultipleMetricsRange = "{__name__=\"test_metric1|test_metric2\",test_label1=\"test_value1\",test_label2=\"test_value2\"}[1m]"
+		assert.Equal(t, expectedQueryStringWithMultipleMetricsRange, testBuilderWithMultipleMetrics.BuildQuery())
 	})
 }

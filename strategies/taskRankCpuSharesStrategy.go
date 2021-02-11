@@ -139,10 +139,10 @@ func (s TaskRankCpuSharesStrategy) avgCpuShare(values []model.SamplePair) float6
 	return sum / float64(len(values))
 }
 
-// GetMetric returns the name of the metric to query.
-func (s TaskRankCpuSharesStrategy) GetMetric() string {
-	// TODO convert this to constant.
-	return "container_spec_cpu_shares"
+// GetMetrics returns the names of the metrics to query.
+func (s TaskRankCpuSharesStrategy) GetMetrics() []string {
+	// TODO metrics to constants.
+	return []string{"container_spec_cpu_shares"}
 }
 
 // SetLabelMatchers sets the label matchers to use to filter data.

@@ -23,7 +23,8 @@ import (
 // Builder represents a query builder that is used to build a query string in promQL format.
 type Builder struct {
 	// The name of the metric to be queried. This is a required field.
-	metric string
+	// metric string
+	metrics []string
 	// List of labels to be used to filter the data. This is an optional field.
 	labelMatchers []*LabelMatcher
 	// The unit of time to use when performing range queries. This is an optional field.
@@ -45,12 +46,12 @@ func NewBuilder(options ...Option) *Builder {
 // BuildQuery builds and returns the query string.
 func (b Builder) BuildQuery() string {
 	var buf bytes.Buffer
-	buf.WriteString(b.metric)
+	buf.WriteString(fmt.Sprintf("{__name__=\"%s\"", strings.Join(b.metrics, "|")))
 	var filters []string
 	for _, m := range b.labelMatchers {
 		filters = append(filters, m.String())
 	}
-	buf.WriteString(fmt.Sprintf("{%s}", strings.Join(filters, ",")))
+	buf.WriteString(fmt.Sprintf(",%s}", strings.Join(filters, ",")))
 	if b.timeUnit.IsValid() {
 		buf.WriteString(fmt.Sprintf("[%d%s]", b.timeDuration, b.timeUnit))
 	}
@@ -59,10 +60,10 @@ func (b Builder) BuildQuery() string {
 
 type Option func(*Builder)
 
-// WithMetric returns an option that initializes the name of the metric to query.
-func WithMetric(metric string) Option {
+// WithMetrics returns an option that initializes the name of the metrics to query.
+func WithMetrics(metrics []string) Option {
 	return func(b *Builder) {
-		b.metric = metric
+		b.metrics = metrics
 	}
 }
 

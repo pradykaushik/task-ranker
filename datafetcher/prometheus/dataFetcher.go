@@ -77,7 +77,7 @@ func WithPrometheusEndpoint(endpoint string) Option {
 func (f *DataFetcher) SetStrategy(s strategies.Interface) {
 	f.strategy = s
 	f.queryBuilder = query.NewBuilder(
-		query.WithMetric(s.GetMetric()),
+		query.WithMetrics(s.GetMetrics()),
 		query.WithLabelMatchers(s.GetLabelMatchers()...),
 		query.WithRange(s.GetRange()))
 }

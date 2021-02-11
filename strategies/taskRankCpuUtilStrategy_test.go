@@ -46,7 +46,7 @@ func TestTaskRankCpuUtilStrategy_SetTaskRanksReceiver(t *testing.T) {
 
 func TestTaskRankCpuUtilStrategy_GetMetric(t *testing.T) {
 	s := initCpuUtilStrategy()
-	assert.Equal(t, "container_cpu_usage_seconds_total", s.GetMetric())
+	assert.Equal(t, "container_cpu_usage_seconds_total", s.GetMetrics()[0])
 }
 
 func TestTaskRankCpuUtilStrategy_SetLabelMatchers(t *testing.T) {
