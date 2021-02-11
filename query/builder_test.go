@@ -104,7 +104,7 @@ func TestNewBuilder(t *testing.T) {
 					Operator: Equal,
 					Value:    "test_value2",
 				}),
-			WithRange(Minutes, 1))
+			WithRange(None, 0))
 	})
 
 	assert.NotNil(t, testBuilderWithMultipleMetrics)
@@ -122,8 +122,8 @@ func TestNewBuilder(t *testing.T) {
 		Operator: Equal,
 		Value:    "test_value2",
 	}, testBuilderWithMultipleMetrics.labelMatchers[1])
-	assert.Equal(t, Minutes, testBuilderWithMultipleMetrics.timeUnit)
-	assert.Equal(t, uint(1), testBuilderWithMultipleMetrics.timeDuration)
+	assert.Equal(t, None, testBuilderWithMultipleMetrics.timeUnit)
+	assert.Equal(t, uint(0), testBuilderWithMultipleMetrics.timeDuration)
 }
 
 func TestBuilder_BuildQuery(t *testing.T) {
@@ -137,8 +137,8 @@ func TestBuilder_BuildQuery(t *testing.T) {
 		assert.Equal(t, expectedQueryStringWithoutRange, testBuilderWithoutRangeQuery.BuildQuery())
 	})
 
-	t.Run("with-multiple-metrics-range-query", func(t *testing.T) {
-		const expectedQueryStringWithMultipleMetricsRange = "{__name__=\"test_metric1|test_metric2\",test_label1=\"test_value1\",test_label2=\"test_value2\"}[1m]"
-		assert.Equal(t, expectedQueryStringWithMultipleMetricsRange, testBuilderWithMultipleMetrics.BuildQuery())
+	t.Run("with-multiple-metrics", func(t *testing.T) {
+		const expectedQueryStringWithMultipleMetrics = "{__name__=~\"test_metric1|test_metric2\",test_label1=\"test_value1\",test_label2=\"test_value2\"}"
+		assert.Equal(t, expectedQueryStringWithMultipleMetrics, testBuilderWithMultipleMetrics.BuildQuery())
 	})
 }

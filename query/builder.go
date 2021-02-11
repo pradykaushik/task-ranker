@@ -46,7 +46,13 @@ func NewBuilder(options ...Option) *Builder {
 // BuildQuery builds and returns the query string.
 func (b Builder) BuildQuery() string {
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("{__name__=\"%s\"", strings.Join(b.metrics, "|")))
+	var metricCompare string
+	if len(b.metrics) > 1 {
+		metricCompare = "=~" // using regex.
+	} else {
+		metricCompare = "=" // using equality.
+	}
+	buf.WriteString(fmt.Sprintf("{__name__%s\"%s\"", metricCompare, strings.Join(b.metrics, "|")))
 	var filters []string
 	for _, m := range b.labelMatchers {
 		filters = append(filters, m.String())
