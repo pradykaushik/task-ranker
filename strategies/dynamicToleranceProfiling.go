@@ -83,13 +83,11 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	for _, sample := range vector {
 		var taskId model.LabelValue
 		var ok bool
-		var noDedicatedLabelTaskId, noDedicatedLabelHostname bool
-		taskId, noDedicatedLabelTaskId = sample.Metric[s.dedicatedLabelNameTaskID]
-		_, noDedicatedLabelHostname = sample.Metric[s.dedicatedLabelNameTaskHostname]
+		var foundDedicatedLabelTaskId, foundDedicatedLabelHostname bool
+		taskId, foundDedicatedLabelTaskId = sample.Metric[s.dedicatedLabelNameTaskID]
+		_, foundDedicatedLabelHostname = sample.Metric[s.dedicatedLabelNameTaskHostname]
 
-		fmt.Printf("%t and %t\n", noDedicatedLabelTaskId, noDedicatedLabelHostname)
-
-		if noDedicatedLabelTaskId && noDedicatedLabelHostname {
+		if !foundDedicatedLabelTaskId && !foundDedicatedLabelHostname {
 			continue // ignore metric.
 		}
 
