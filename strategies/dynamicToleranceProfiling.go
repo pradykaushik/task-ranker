@@ -87,6 +87,8 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 		taskId, noDedicatedLabelTaskId = sample.Metric[s.dedicatedLabelNameTaskID]
 		_, noDedicatedLabelHostname = sample.Metric[s.dedicatedLabelNameTaskHostname]
 
+		fmt.Printf("%t and %t\n", noDedicatedLabelTaskId, noDedicatedLabelHostname)
+
 		if noDedicatedLabelTaskId && noDedicatedLabelHostname {
 			continue // ignore metric.
 		}
