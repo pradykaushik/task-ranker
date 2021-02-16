@@ -140,7 +140,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	for taskId, metrics := range s.taskMetrics {
 		fields["taskId"] = taskId
 		for name, value := range metrics {
-			fields[string(name)] = strconv.FormatFloat(float64(value), 'E', 64, 3)
+			fields[string(name)] = strconv.FormatFloat(float64(value), 'E', -1, 64)
 		}
 	}
 
