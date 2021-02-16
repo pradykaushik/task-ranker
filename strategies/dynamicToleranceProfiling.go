@@ -1,7 +1,6 @@
 package strategies
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/logger"
@@ -94,13 +93,11 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 		fmt.Println("not skipping")
 
 		if _, ok = s.taskMetrics[string(taskId)]; !ok {
-			fmt.Println("adding entry for ", taskId)
 			s.taskMetrics[string(taskId)] = make(map[metric]metricData)
 		}
 
 		switch sample.Metric["__name__"] {
 		case "container_spec_cpu_shares":
-			fmt.Println("container_spec_cpu_shares = ", sample.Value)
 			if _, ok = s.taskMetrics[string(taskId)][cpuSharesMetric]; !ok {
 				s.taskMetrics[string(taskId)][cpuSharesMetric] = metricData(sample.Value)
 			}
@@ -135,19 +132,19 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 				dataPoint.timestamp)))
 		}
 
-		fmt.Println("cpuutil = ", cpuUtil)
 		s.taskMetrics[taskId][cpuUtilMetric] = cpuUtil
 	}
 
-	serialized, err := json.Marshal(s.taskMetrics)
-	fmt.Println(s.taskMetrics)
-	if err == nil {
-		if len(s.taskMetrics) > 0 {
-			logger.WithFields(logrus.Fields{
-				topic.TaskRankingStrategy.String(): "dT-profiling",
-				topic.TaskRankingResult.String(): string(serialized),
-			}).Log(logrus.InfoLevel)
+	var fields = logrus.Fields{topic.Metrics.String(): "dT-profiler-metrics"}
+	for taskId, metrics := range s.taskMetrics {
+		fields["taskId"] = taskId
+		for name, value := range metrics {
+			fields[string(name)] = value
 		}
+	}
+
+	if len(s.taskMetrics) > 0 {
+		logger.WithFields(fields).Log(logrus.InfoLevel)
 	}
 }
 

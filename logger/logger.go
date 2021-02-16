@@ -34,6 +34,9 @@ const (
 	// Prefix of the name of the log file to store task ranking results.
 	// This will be suffixed with the timestamp, associated with creating the file, to obtain the log filename.
 	taskRankingResultsLogFilePrefix = "task_ranking_results"
+	// Prefix of the name of the log file to store the task metrics.
+	// This will be suffixed with the timestamp, associated with creating the file, to obtain the log filename.
+	taskMetricsLogFilePrefix = "task_metrics"
 	// Giving everyone read and write permissions to the log files.
 	logFilePermissions = 0666
 )
@@ -43,6 +46,7 @@ var log = logrus.New()
 
 var taskRankerLogFile *os.File
 var taskRankingResultsLogFile *os.File
+var taskMetricsFile *os.File
 
 // createTaskRankerLogFile creates the log file to which task ranker logs are persisted.
 func createTaskRankerLogFile(now time.Time) error {
@@ -66,6 +70,16 @@ func createTaskRankingResultsLogFile(now time.Time) error {
 	return err
 }
 
+func createTaskMetricsFile(now time.Time) error {
+	var err error
+	filename := fmt.Sprintf("%s_%v.log", taskMetricsLogFilePrefix, now.UnixNano())
+	taskMetricsFile, err = os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, logFilePermissions)
+	if err != nil {
+		err = errors.Wrap(err, "failed to create task metrics file")
+	}
+	return err
+}
+
 // Configure the logger. To be prevented task ranker logs from mixing with the logs of the application
 // that is using it, logging to the console is disabled and instead hooks that redirect logs to corresponding
 // log files are attached to the logger.
@@ -83,6 +97,9 @@ func Configure() error {
 		return err
 	}
 	if err = createTaskRankingResultsLogFile(now); err != nil {
+		return err
+	}
+	if err = createTaskMetricsFile(now); err != nil {
 		return err
 	}
 
@@ -112,6 +129,7 @@ func Configure() error {
 		topic.Stage, topic.Query, topic.QueryResult))
 	log.AddHook(newWriterHook(jsonFormatter, taskRankingResultsLogFile, disabledTopics,
 		topic.TaskRankingStrategy, topic.TaskRankingResult))
+	log.AddHook(newWriterHook(NewCSVFormatter(), taskMetricsFile, disabledTopics, topic.Metrics))
 
 	return nil
 }
@@ -129,6 +147,13 @@ func Done() error {
 		err = taskRankingResultsLogFile.Close()
 		if err != nil {
 			err = errors.Wrap(err, "failed to close tank ranking results log file")
+		}
+	}
+
+	if taskMetricsFile != nil {
+		err = taskMetricsFile.Close()
+		if err != nil {
+			err = errors.Wrap(err, "failed to close task metrics file")
 		}
 	}
 	return err
