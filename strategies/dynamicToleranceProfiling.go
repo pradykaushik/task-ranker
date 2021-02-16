@@ -9,7 +9,6 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	"math"
-	"strconv"
 	"time"
 )
 
@@ -91,8 +90,6 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 			continue // ignore metric.
 		}
 
-		fmt.Println("not skipping")
-
 		if _, ok = s.taskMetrics[string(taskId)]; !ok {
 			s.taskMetrics[string(taskId)] = make(map[metric]metricData)
 		}
@@ -140,7 +137,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	for taskId, metrics := range s.taskMetrics {
 		fields["taskId"] = taskId
 		for name, value := range metrics {
-			fields[string(name)] = strconv.FormatFloat(float64(value), 'E', -1, 64)
+			fields[string(name)] = fmt.Sprintf("%f", value)
 		}
 	}
 
