@@ -134,7 +134,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	}
 
 	serialized, err := json.Marshal(s.taskMetrics)
-	fmt.Println(serialized)
+	fmt.Println(s.taskMetrics)
 	if err == nil {
 		if len(s.taskMetrics) > 0 {
 			logger.WithFields(logrus.Fields{
