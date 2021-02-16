@@ -54,6 +54,7 @@ func (s *DynamicToleranceProfiler) Init() {
 	s.rangeTimeUnit = query.None
 	s.rangeQty = 0
 	s.previousTotalCpuUsage = make(map[string]*cpuUsageDataPoint)
+	s.taskMetrics = make(map[string]map[metric]metricData)
 }
 
 // SetPrometheusScrapeInterval sets the scrape interval of prometheus.
@@ -76,6 +77,8 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 		// TODO do not ignore this. maybe log it?
 		return
 	}
+
+	fmt.Println(vector)
 
 	// Stores the total cumulative cpu usage for each running task.
 	var nowTotalCpuUsage = make(map[string]*cpuUsageDataPoint)
