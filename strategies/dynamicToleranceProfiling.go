@@ -78,8 +78,6 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 		return
 	}
 
-	fmt.Println(vector)
-
 	// Stores the total cumulative cpu usage for each running task.
 	var nowTotalCpuUsage = make(map[string]*cpuUsageDataPoint)
 	for _, sample := range vector {
@@ -93,12 +91,16 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 			continue // ignore metric.
 		}
 
+		fmt.Println("not skipping")
+
 		if _, ok = s.taskMetrics[string(taskId)]; !ok {
+			fmt.Println("adding entry for ", taskId)
 			s.taskMetrics[string(taskId)] = make(map[metric]metricData)
 		}
 
 		switch sample.Metric["__name__"] {
 		case "container_spec_cpu_shares":
+			fmt.Println("container_spec_cpu_shares = ", sample.Value)
 			if _, ok = s.taskMetrics[string(taskId)][cpuSharesMetric]; !ok {
 				s.taskMetrics[string(taskId)][cpuSharesMetric] = metricData(sample.Value)
 			}
@@ -133,6 +135,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 				dataPoint.timestamp)))
 		}
 
+		fmt.Println("cpuutil = ", cpuUtil)
 		s.taskMetrics[taskId][cpuUtilMetric] = cpuUtil
 	}
 
