@@ -30,11 +30,13 @@ const (
 	// Provide this name as the strategy when configuring the task ranker to use it for
 	// ranking tasks.
 	cpuUtilStrategy = "cpuutil"
+	dynamicToleranceProfile = "dT-profile"
 )
 
 var availableStrategies = map[string]strategies.Interface{
 	cpuSharesStrategy: new(strategies.TaskRankCpuSharesStrategy),
 	cpuUtilStrategy:   new(strategies.TaskRankCpuUtilStrategy),
+	dynamicToleranceProfile: new(strategies.DynamicToleranceProfiler),
 }
 
 // GetTaskRankStrategy returns the task ranking strategy with the given name.

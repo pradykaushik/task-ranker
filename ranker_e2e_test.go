@@ -98,6 +98,14 @@ func TestTaskRanker_CpuUtilRanking(t *testing.T) {
 	testStrategy(t, tRanker, initErr)
 }
 
+func TestTaskRanker_DynamicToleranceProfiling(t *testing.T) {
+	tRanker, initErr := initTaskRankerOptions("dT-profile")
+	assert.NoError(t, initErr)
+	tRanker.Start()
+	<-time.After(13 * time.Second)
+	tRanker.Stop()
+}
+
 func testStrategy(t *testing.T, tRanker *TaskRanker, initErr error) {
 	assert.NoError(t, initErr)
 	assert.NotNil(t, tRanker)
