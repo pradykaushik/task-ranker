@@ -2,7 +2,6 @@ package logger
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"strings"
 )
@@ -31,8 +30,6 @@ func (f *CSVFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	// values.
 	var values []string
 	for _, h := range f.headers {
-		fmt.Println(h)
-		fmt.Println(entry.Data)
 		values = append(values, entry.Data[h].(string))
 	}
 

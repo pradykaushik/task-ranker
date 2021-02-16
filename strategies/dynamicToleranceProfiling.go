@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	"math"
+	"strconv"
 	"time"
 )
 
@@ -139,7 +140,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	for taskId, metrics := range s.taskMetrics {
 		fields["taskId"] = taskId
 		for name, value := range metrics {
-			fields[string(name)] = value
+			fields[string(name)] = strconv.FormatFloat(float64(value), 'E', 64, 3)
 		}
 	}
 
