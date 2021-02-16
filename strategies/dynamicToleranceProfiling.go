@@ -2,6 +2,7 @@ package strategies
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/logger"
 	"github.com/pradykaushik/task-ranker/logger/topic"
@@ -133,6 +134,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	}
 
 	serialized, err := json.Marshal(s.taskMetrics)
+	fmt.Println(serialized)
 	if err == nil {
 		if len(s.taskMetrics) > 0 {
 			logger.WithFields(logrus.Fields{
