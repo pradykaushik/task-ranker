@@ -43,10 +43,17 @@ type DynamicToleranceProfiler struct {
 // metrics monitored per task.
 type metricData float64
 type metric string
-const cpuSharesMetric metric = "cpu-shares"
-const cpuUtilMetric metric = "cpu-util-percentage"
 
-const cpuSharesDefaultValue metricData = -1
+// cAdvisor metrics.
+const cpuSharesMetric metric = "container_spec_cpu_shares"
+const cpuQuotaMetric metric = "container_spec_cpu_quota"
+const cpuPeriodMetric metric = "container_spec_cpu_period"
+const cpuCfsThrottledPeriodsTotalMetric metric = "container_cpu_cfs_throttled_periods_total"
+const cpuCfsThrottledSecondsTotalMetric metric = "container_cpu_cfs_throttled_seconds_total"
+const cpuUsageSecondsTotalMetric metric = "container_cpu_usage_seconds_total"
+
+// Derived metrics.
+const cpuUtilMetric metric = "cpu_util_percentage"
 const cpuUtilDefaultValue metricData = -1
 
 func (s *DynamicToleranceProfiler) Init() {
@@ -94,13 +101,15 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 			s.taskMetrics[string(taskId)] = make(map[metric]metricData)
 		}
 
-		switch sample.Metric["__name__"] {
-		case "container_spec_cpu_shares":
-			if _, ok = s.taskMetrics[string(taskId)][cpuSharesMetric]; !ok {
-				s.taskMetrics[string(taskId)][cpuSharesMetric] = metricData(sample.Value)
+		m := metric(sample.Metric["__name__"])
+		switch m {
+		case cpuSharesMetric, cpuQuotaMetric, cpuPeriodMetric,
+			cpuCfsThrottledPeriodsTotalMetric, cpuCfsThrottledSecondsTotalMetric:
+			if _, ok = s.taskMetrics[string(taskId)][m]; !ok {
+				s.taskMetrics[string(taskId)][m] = metricData(sample.Value)
 			}
 
-		case "container_cpu_usage_seconds_total":
+		case cpuUsageSecondsTotalMetric:
 			if _, ok = nowTotalCpuUsage[string(taskId)]; !ok {
 				// Creating entry to record current total cumulative cpu usage.
 				nowTotalCpuUsage[string(taskId)] = &cpuUsageDataPoint{
@@ -111,13 +120,14 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 				// Adding cumulative cpu usage seconds for task on a cpu.
 				nowTotalCpuUsage[string(taskId)].totalCumulativeCpuUsage += float64(sample.Value)
 			}
+
 		default:
 			// shouldn't be here.
 			// unwanted metric.
 		}
 	}
 
-	// need to record cpu utilization.
+	// record cpu utilization.
 	for taskId, dataPoint := range nowTotalCpuUsage {
 		var cpuUtil = cpuUtilDefaultValue
 		if prevDataPoint, ok := s.previousTotalCpuUsage[taskId]; !ok {
@@ -171,8 +181,12 @@ func (s DynamicToleranceProfiler) cpuUtil(
 func (s DynamicToleranceProfiler) GetMetrics() []string {
 	// TODO convert metrics to constants.
 	return []string{
-		"container_cpu_usage_seconds_total",
-		"container_spec_cpu_shares",
+		string(cpuUsageSecondsTotalMetric),
+		string(cpuSharesMetric),
+		string(cpuQuotaMetric),
+		string(cpuPeriodMetric),
+		string(cpuCfsThrottledPeriodsTotalMetric),
+		string(cpuUsageSecondsTotalMetric),
 	}
 }
 
