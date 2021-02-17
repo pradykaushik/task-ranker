@@ -16,7 +16,6 @@ package prometheus
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
 	"github.com/pradykaushik/task-ranker/datafetcher"
 	"github.com/pradykaushik/task-ranker/logger"
@@ -94,7 +93,6 @@ func (f *DataFetcher) GetEndpoint() string {
 // therefore we need to watch out for compatibility issues.
 func (f *DataFetcher) Fetch() (result model.Value, err error) {
 	queryString := f.queryBuilder.BuildQuery()
-	fmt.Println(queryString)
 	// Following examples from here - https://github.com/prometheus/client_golang/blob/master/api/prometheus/v1/example_test.go.
 	var client api.Client
 	client, err = api.NewClient(api.Config{Address: f.endpoint})
