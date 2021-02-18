@@ -51,7 +51,8 @@ const cpuPeriodMetric metric = "container_spec_cpu_period"
 const cpuCfsThrottledPeriodsTotalMetric metric = "container_cpu_cfs_throttled_periods_total"
 const cpuCfsThrottledSecondsTotalMetric metric = "container_cpu_cfs_throttled_seconds_total"
 const cpuUsageSecondsTotalMetric metric = "container_cpu_usage_seconds_total"
-const cpuSchedStatRunQueueSecondsTotal metric = "container_cpu_schedstat_runqueue_seconds_total"
+const cpuSchedStatRunQueueSecondsTotalMetric metric = "container_cpu_schedstat_runqueue_seconds_total"
+const fsUsageBytesMetric metric = "container_fs_usage_bytes"
 
 // Derived metrics.
 const cpuUtilMetric metric = "cpu_util_percentage"
@@ -106,7 +107,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 		switch m {
 		case cpuSharesMetric, cpuQuotaMetric, cpuPeriodMetric,
 			cpuCfsThrottledPeriodsTotalMetric, cpuCfsThrottledSecondsTotalMetric,
-			cpuSchedStatRunQueueSecondsTotal:
+			cpuSchedStatRunQueueSecondsTotalMetric, fsUsageBytesMetric:
 			if _, ok = s.taskMetrics[string(taskId)][m]; !ok {
 				s.taskMetrics[string(taskId)][m] = metricData(sample.Value)
 			}
@@ -189,7 +190,8 @@ func (s DynamicToleranceProfiler) GetMetrics() []string {
 		string(cpuPeriodMetric),
 		string(cpuCfsThrottledPeriodsTotalMetric),
 		string(cpuUsageSecondsTotalMetric),
-		string(cpuSchedStatRunQueueSecondsTotal),
+		string(cpuSchedStatRunQueueSecondsTotalMetric),
+		string(fsUsageBytesMetric),
 	}
 }
 
