@@ -10,7 +10,7 @@ import (
 // The keys in the fields are used as headers and the field values in subsequent
 // calls to Format() will be matched and ordered based on the columns in the csv.
 type CSVFormatter struct {
-	 headers []string
+	headers []string
 }
 
 func NewCSVFormatter() logrus.Formatter {

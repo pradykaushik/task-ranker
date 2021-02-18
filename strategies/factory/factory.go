@@ -29,13 +29,13 @@ const (
 	// tasks in non-increasing order based on the cpu utilization in the past N seconds.
 	// Provide this name as the strategy when configuring the task ranker to use it for
 	// ranking tasks.
-	cpuUtilStrategy = "cpuutil"
+	cpuUtilStrategy         = "cpuutil"
 	dynamicToleranceProfile = "dT-profile"
 )
 
 var availableStrategies = map[string]strategies.Interface{
-	cpuSharesStrategy: new(strategies.TaskRankCpuSharesStrategy),
-	cpuUtilStrategy:   new(strategies.TaskRankCpuUtilStrategy),
+	cpuSharesStrategy:       new(strategies.TaskRankCpuSharesStrategy),
+	cpuUtilStrategy:         new(strategies.TaskRankCpuUtilStrategy),
 	dynamicToleranceProfile: new(strategies.DynamicToleranceProfiler),
 }
 

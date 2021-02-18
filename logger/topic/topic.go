@@ -23,7 +23,7 @@ var (
 	QueryResult         = nameToTopic("query_result")          // Result of the execution of the query made to Prometheus.
 	TaskRankingStrategy = nameToTopic("task_ranking_strategy") // Task ranking strategy.
 	TaskRankingResult   = nameToTopic("task_ranking_result")   // Result of applying the configured task ranking strategy.
-	Metrics = nameToTopic("metrics") // Metrics to be logged.
+	Metrics             = nameToTopic("metrics")               // Metrics to be logged.
 )
 
 var topicNames []string
