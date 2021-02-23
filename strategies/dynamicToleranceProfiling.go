@@ -173,11 +173,11 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 		if prevDataPoint, ok := s.previousTotalCpuUsage[taskId]; !ok {
 			s.previousTotalCpuUsage[taskId] = dataPoint
 		} else {
-			cpuUtil = metricData(s.round(s.cpuUtil(
+			cpuUtil = metricData(s.cpuUtil(
 				prevDataPoint.totalCumulativeCpuUsage,
 				prevDataPoint.timestamp,
 				dataPoint.totalCumulativeCpuUsage,
-				dataPoint.timestamp), cpuUtilPrecision))
+				dataPoint.timestamp))
 		}
 
 		s.taskMetrics[taskId][cpuUtilMetric] = cpuUtil
@@ -189,11 +189,11 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 			// first time recording instructions retired for this task.
 			s.taskMetrics[taskId][instructionRetirementRateMetric] = instructionRetirementRateDefaultValue
 		} else {
-			s.taskMetrics[taskId][instructionRetirementRateMetric] = metricData(s.round(s.instructionRetirementRate(
+			s.taskMetrics[taskId][instructionRetirementRateMetric] = metricData(s.instructionRetirementRate(
 				previousDataPoint.ir,
 				previousDataPoint.timestamp,
 				dataPoint.ir,
-				dataPoint.timestamp), 2))
+				dataPoint.timestamp))
 		}
 		s.previousInstructionsRetired[taskId] = dataPoint
 	}
@@ -202,7 +202,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	for taskId, metrics := range s.taskMetrics {
 		fields["taskId"] = taskId
 		for name, value := range metrics {
-			fields[string(name)] = fmt.Sprintf("%f", value)
+			fields[string(name)] = fmt.Sprintf("%.3f", value)
 		}
 	}
 
