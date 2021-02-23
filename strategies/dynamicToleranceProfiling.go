@@ -82,6 +82,7 @@ func (s *DynamicToleranceProfiler) Init() {
 	s.rangeTimeUnit = query.None
 	s.rangeQty = 0
 	s.previousTotalCpuUsage = make(map[string]*cpuUsageDataPoint)
+	s.previousInstructionsRetired = make(map[string]*instructionsRetiredDataPoint)
 	s.taskMetrics = make(map[string]map[metric]metricData)
 }
 
