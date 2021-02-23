@@ -29,7 +29,7 @@ type DynamicToleranceProfiler struct {
 	previousTotalCpuUsage map[string]*cpuUsageDataPoint
 	// previousInstructionsRetired stores the instructions retired in the previous monitoring cycle.
 	// Expects that perf metrics from cAdvisor are aggregated (--disable_metrics="percpu").
-	previousInstructionsRetired map[string]*instructionsRetiredDataPoint
+	previousPerfMetrics map[string]map[perfMetricName]*perfDataPoint
 	// taskMetrics stores the data for different metrics monitored for each task.
 	taskMetrics map[string]map[metric]metricData
 	// Time duration for range query.
@@ -43,8 +43,8 @@ type DynamicToleranceProfiler struct {
 	rangeQty      uint
 }
 
-type instructionsRetiredDataPoint struct {
-	ir        float64
+type perfDataPoint struct {
+	value     float64
 	timestamp model.Time
 }
 
@@ -67,22 +67,24 @@ const processesMetric metric = "container_processes"
 const perfEventsTotalMetric metric = "container_perf_events_total"
 
 // perf event names.
-const perfEventNameInstructionsRetired = "instructions_retired"
-const perfEventNameCycles = "cycles"
+type perfMetricName model.LabelValue
+
+const perfEventNameInstructionsRetired perfMetricName = "instructions_retired"
+const perfEventNameCycles perfMetricName = "cycles"
 
 // Derived metrics.
 const cpuUtilMetric metric = "cpu_util_percentage"
 const cpuUtilDefaultValue metricData = -1
 const instructionRetirementRateMetric metric = "instruction_retirement_rate"
 const instructionRetirementRateDefaultValue metricData = -1
-const cyclesPerSecond metric = "cycles_per_second"
+const cyclesPerSecondMetric metric = "cycles_per_second"
 const cyclesPerSecondDefaultValue = -1
 
 func (s *DynamicToleranceProfiler) Init() {
 	s.rangeTimeUnit = query.None
 	s.rangeQty = 0
 	s.previousTotalCpuUsage = make(map[string]*cpuUsageDataPoint)
-	s.previousInstructionsRetired = make(map[string]*instructionsRetiredDataPoint)
+	s.previousPerfMetrics = make(map[string]map[perfMetricName]*perfDataPoint)
 	s.taskMetrics = make(map[string]map[metric]metricData)
 }
 
@@ -110,7 +112,8 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	// Stores the total cumulative cpu usage for each running task.
 	var nowTotalCpuUsage = make(map[string]*cpuUsageDataPoint)
 	// Stores the number of instructions retired since the last cycle.
-	var nowInstructionsRetired = make(map[string]*instructionsRetiredDataPoint)
+	var nowInstructionsRetired = make(map[string]*perfDataPoint)
+	var nowCycles = make(map[string]*perfDataPoint)
 	for _, sample := range vector {
 		var taskId model.LabelValue
 		var ok bool
@@ -151,10 +154,17 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 			var event model.LabelValue
 			event, ok = sample.Metric["event"]
 			if ok {
-				if event == perfEventNameInstructionsRetired {
+				if event == model.LabelValue(perfEventNameInstructionsRetired) {
 					if _, ok := nowInstructionsRetired[string(taskId)]; !ok {
-						nowInstructionsRetired[string(taskId)] = &instructionsRetiredDataPoint{
-							ir:        float64(sample.Value),
+						nowInstructionsRetired[string(taskId)] = &perfDataPoint{
+							value:     float64(sample.Value),
+							timestamp: sample.Timestamp,
+						}
+					}
+				} else if event == model.LabelValue(perfEventNameCycles) {
+					if _, ok := nowCycles[string(taskId)]; !ok {
+						nowCycles[string(taskId)] = &perfDataPoint{
+							value:     float64(sample.Value),
 							timestamp: sample.Timestamp,
 						}
 					}
@@ -184,18 +194,39 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	}
 
 	// calculate and record instruction retirement rate.
-	for taskId, dataPoint := range nowInstructionsRetired {
-		if previousDataPoint, ok := s.previousInstructionsRetired[taskId]; !ok {
+	for taskId, nowIR := range nowInstructionsRetired {
+		if _, ok := s.previousPerfMetrics[taskId]; !ok {
+			s.previousPerfMetrics[taskId] = make(map[perfMetricName]*perfDataPoint)
+		}
+		if previousIR, ok := s.previousPerfMetrics[taskId][perfEventNameInstructionsRetired]; !ok {
 			// first time recording instructions retired for this task.
 			s.taskMetrics[taskId][instructionRetirementRateMetric] = instructionRetirementRateDefaultValue
 		} else {
-			s.taskMetrics[taskId][instructionRetirementRateMetric] = metricData(s.instructionRetirementRate(
-				previousDataPoint.ir,
-				previousDataPoint.timestamp,
-				dataPoint.ir,
-				dataPoint.timestamp))
+			// IRR = #instructions_retired / elapsed_time_in_seconds.
+			s.taskMetrics[taskId][instructionRetirementRateMetric] = metricData(s.rate(
+				previousIR.value,
+				previousIR.timestamp,
+				nowIR.value,
+				nowIR.timestamp))
 		}
-		s.previousInstructionsRetired[taskId] = dataPoint
+		s.previousPerfMetrics[taskId][perfEventNameInstructionsRetired] = nowIR
+	}
+
+	// calculate and record cycles per second.
+	for taskId, cycles := range nowCycles {
+		if _, ok := s.previousPerfMetrics[taskId]; !ok {
+			s.previousPerfMetrics[taskId] = make(map[perfMetricName]*perfDataPoint)
+		}
+		if previousCycles, ok := s.previousPerfMetrics[taskId][perfEventNameCycles]; !ok {
+			// first time recording cycles for this task.
+			s.taskMetrics[taskId][cyclesPerSecondMetric] = cyclesPerSecondDefaultValue
+		} else {
+			s.taskMetrics[taskId][cyclesPerSecondMetric] = metricData(s.rate(
+				previousCycles.value,
+				previousCycles.timestamp,
+				cycles.value,
+				cycles.timestamp))
+		}
 	}
 
 	var fields = logrus.Fields{topic.Metrics.String(): "dT-profiler-metrics"}
@@ -232,18 +263,15 @@ func (s DynamicToleranceProfiler) cpuUtil(
 	return 100.0 * ((nowTotalCpuUsage - prevTotalCpuUsage) / timeDiffSeconds)
 }
 
-func (s DynamicToleranceProfiler) instructionRetirementRate(
-	previousInstructionsRetired float64,
-	previousInstructionRetiredTimestamp model.Time,
-	nowInstructionsRetired float64,
-	nowInstructionsRetiredTimestamp model.Time) float64 {
-
-	// IRR = #instructions_retired / elapsed_time_in_seconds.
-	//
+func (s DynamicToleranceProfiler) rate(
+	previousValue float64,
+	previousTimestamp model.Time,
+	nowValue float64,
+	nowTimestamp model.Time) float64 {
 	// timestamps are in milliseconds and therefore dividing by 1000 to convert to seconds.
-	timeDiffSeconds := float64(nowInstructionsRetiredTimestamp-previousInstructionRetiredTimestamp) / 1000
-	irDiff := nowInstructionsRetired - previousInstructionsRetired
-	return irDiff / timeDiffSeconds
+	timeDiffSeconds := float64(nowTimestamp-previousTimestamp) / 1000
+	valueDiff := nowValue - previousValue
+	return valueDiff / timeDiffSeconds
 }
 
 // GetMetrics returns the names of the metrics to query.
@@ -295,7 +323,7 @@ func (s *DynamicToleranceProfiler) SetLabelMatchers(labelMatchers []*query.Label
 		Operator: query.EqualRegex,
 		// Hack: using {event=~"<event_name>|"} instead of {event="<event_name>"} to prevent
 		// filtering out other metrics for which there would be no data for 'event' label.
-		Value: perfEventNameInstructionsRetired + "|",
+		Value: string(perfEventNameInstructionsRetired) + "|" + string(perfEventNameCycles) + "|",
 	})
 	return nil
 }
