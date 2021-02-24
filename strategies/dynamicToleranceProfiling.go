@@ -231,6 +231,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 				previousIR.timestamp,
 				nowIR.value,
 				nowIR.timestamp))
+			fmt.Println("IRR.value = ", s.taskMetrics[taskId][instructionRetirementRateMetric])
 		}
 		s.previousPerfMetrics[taskId][perfEventNameInstructionsRetired] = nowIR
 	}
@@ -249,6 +250,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 				previousCycles.timestamp,
 				cycles.value,
 				cycles.timestamp))
+			fmt.Println("CPS.value = ", s.taskMetrics[taskId][cyclesPerSecondMetric])
 		}
 	}
 
