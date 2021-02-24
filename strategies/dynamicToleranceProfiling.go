@@ -61,7 +61,7 @@ const cpuCfsThrottledSecondsTotalMetric metric = "container_cpu_cfs_throttled_se
 const cpuUsageSecondsTotalMetric metric = "container_cpu_usage_seconds_total"
 const cpuSchedStatRunQueueSecondsTotalMetric metric = "container_cpu_schedstat_runqueue_seconds_total"
 const cpuSchedStatRunPeriodsTotalMetric metric = "container_cpu_schedstat_run_periods_total"
-const cpuSchedStatRunSecondsTotalMetric metric = "container_cpu_schedStat_run_seconds_total"
+const cpuSchedStatRunSecondsTotalMetric metric = "container_cpu_schedstat_run_seconds_total"
 const fsUsageBytesMetric metric = "container_fs_usage_bytes"
 const processesMetric metric = "container_processes"
 const perfEventsTotalMetric metric = "container_perf_events_total"
@@ -81,6 +81,25 @@ const cyclesPerSecondMetric metric = "cycles_per_second"
 const cyclesPerSecondDefaultValue metricData = -1
 const cyclesPerInstructionMetric metric = "cycles_per_instruction"
 const cyclesPerInstructionDefaultValue metricData = -1
+
+// log csv header metric order.
+var headers = []metric{
+	cpuSharesMetric,
+	cpuQuotaMetric,
+	cpuPeriodMetric,
+	cpuCfsThrottledSecondsTotalMetric,
+	cpuCfsThrottledPeriodsTotalMetric,
+	cpuUsageSecondsTotalMetric,
+	cpuUtilMetric,
+	cpuSchedStatRunSecondsTotalMetric,
+	cpuSchedStatRunPeriodsTotalMetric,
+	cpuSchedStatRunQueueSecondsTotalMetric,
+	fsUsageBytesMetric,
+	processesMetric,
+	instructionRetirementRateMetric,
+	cyclesPerSecondMetric,
+	cyclesPerInstructionMetric,
+}
 
 func (s *DynamicToleranceProfiler) Init() {
 	s.rangeTimeUnit = query.None
@@ -249,8 +268,8 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	var fields = logrus.Fields{topic.Metrics.String(): "dT-profiler-metrics"}
 	for taskId, metrics := range s.taskMetrics {
 		fields["taskId"] = taskId
-		for name, value := range metrics {
-			fields[string(name)] = fmt.Sprintf("%.3f", value)
+		for _, headerMetric := range headers {
+			fields[string(headerMetric)] = fmt.Sprintf("%.3f", metrics[headerMetric])
 		}
 	}
 
