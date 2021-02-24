@@ -177,7 +177,6 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 			if ok {
 				if event == model.LabelValue(perfEventNameInstructionsRetired) {
 					if _, ok := nowInstructionsRetired[string(taskId)]; !ok {
-						fmt.Println("IR.value = ", sample.Value)
 						nowInstructionsRetired[string(taskId)] = &perfDataPoint{
 							value:     float64(sample.Value),
 							timestamp: sample.Timestamp,
@@ -185,7 +184,6 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 					}
 				} else if event == model.LabelValue(perfEventNameCycles) {
 					if _, ok := nowCycles[string(taskId)]; !ok {
-						fmt.Println("Cycles.value = ", sample.Value)
 						nowCycles[string(taskId)] = &perfDataPoint{
 							value:     float64(sample.Value),
 							timestamp: sample.Timestamp,
@@ -231,7 +229,6 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 				previousIR.timestamp,
 				nowIR.value,
 				nowIR.timestamp))
-			fmt.Println("IRR.value = ", s.taskMetrics[taskId][instructionRetirementRateMetric])
 		}
 		s.previousPerfMetrics[taskId][perfEventNameInstructionsRetired] = nowIR
 	}
@@ -250,7 +247,6 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 				previousCycles.timestamp,
 				cycles.value,
 				cycles.timestamp))
-			fmt.Println("CPS.value = ", s.taskMetrics[taskId][cyclesPerSecondMetric])
 		}
 		s.previousPerfMetrics[taskId][perfEventNameCycles] = cycles
 	}
@@ -263,7 +259,6 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 		if !irrOk || !cpsOk {
 			metrics[cyclesPerInstructionMetric] = cyclesPerInstructionDefaultValue
 		} else {
-			fmt.Println("cpi = ", cyclesPerSecond/instructionRetirementRate)
 			metrics[cyclesPerInstructionMetric] = metricData(s.round(float64(cyclesPerSecond/instructionRetirementRate), 2))
 		}
 	}
