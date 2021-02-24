@@ -78,7 +78,9 @@ const cpuUtilDefaultValue metricData = -1
 const instructionRetirementRateMetric metric = "instruction_retirement_rate"
 const instructionRetirementRateDefaultValue metricData = -1
 const cyclesPerSecondMetric metric = "cycles_per_second"
-const cyclesPerSecondDefaultValue = -1
+const cyclesPerSecondDefaultValue metricData = -1
+const cyclesPerInstructionMetric metric = "cycles_per_instruction"
+const cyclesPerInstructionDefaultValue metricData = -1
 
 func (s *DynamicToleranceProfiler) Init() {
 	s.rangeTimeUnit = query.None
@@ -226,6 +228,18 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 				previousCycles.timestamp,
 				cycles.value,
 				cycles.timestamp))
+		}
+	}
+
+	// calculating cycles per instruction (CPI).
+	// at this point, for every taskId we have recorded both IPS (IRR) and CPS.
+	for _, metrics := range s.taskMetrics {
+		instructionRetirementRate, irrOk := metrics[instructionRetirementRateMetric]
+		cyclesPerSecond, cpsOk := metrics[cyclesPerSecondMetric]
+		if !irrOk || !cpsOk {
+			metrics[cyclesPerInstructionMetric] = cyclesPerSecondDefaultValue
+		} else {
+			metrics[cyclesPerInstructionMetric] = metricData(s.round(float64(cyclesPerSecond/instructionRetirementRate), 2))
 		}
 	}
 
