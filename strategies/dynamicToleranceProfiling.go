@@ -82,25 +82,6 @@ const cyclesPerSecondDefaultValue metricData = -1
 const cyclesPerInstructionMetric metric = "cycles_per_instruction"
 const cyclesPerInstructionDefaultValue metricData = -1
 
-// log csv header metric order.
-var headers = []metric{
-	cpuSharesMetric,
-	cpuQuotaMetric,
-	cpuPeriodMetric,
-	cpuCfsThrottledSecondsTotalMetric,
-	cpuCfsThrottledPeriodsTotalMetric,
-	cpuUsageSecondsTotalMetric,
-	cpuUtilMetric,
-	cpuSchedStatRunSecondsTotalMetric,
-	cpuSchedStatRunPeriodsTotalMetric,
-	cpuSchedStatRunQueueSecondsTotalMetric,
-	fsUsageBytesMetric,
-	processesMetric,
-	instructionRetirementRateMetric,
-	cyclesPerSecondMetric,
-	cyclesPerInstructionMetric,
-}
-
 func (s *DynamicToleranceProfiler) Init() {
 	s.rangeTimeUnit = query.None
 	s.rangeQty = 0
@@ -256,7 +237,9 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	for _, metrics := range s.taskMetrics {
 		instructionRetirementRate, irrOk := metrics[instructionRetirementRateMetric]
 		cyclesPerSecond, cpsOk := metrics[cyclesPerSecondMetric]
-		if !irrOk || !cpsOk {
+		if (!irrOk || !cpsOk) ||
+			((instructionRetirementRate == instructionRetirementRateDefaultValue) &&
+				(cyclesPerSecond == cyclesPerSecondDefaultValue)) {
 			metrics[cyclesPerInstructionMetric] = cyclesPerInstructionDefaultValue
 		} else {
 			metrics[cyclesPerInstructionMetric] = metricData(s.round(float64(cyclesPerSecond/instructionRetirementRate), 2))
@@ -266,8 +249,8 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	var fields = logrus.Fields{topic.Metrics.String(): "dT-profiler-metrics"}
 	for taskId, metrics := range s.taskMetrics {
 		fields["taskId"] = taskId
-		for _, headerMetric := range headers {
-			fields[string(headerMetric)] = fmt.Sprintf("%.3f", metrics[headerMetric])
+		for header, value := range metrics {
+			fields[string(header)] = fmt.Sprintf("%.3f", value)
 		}
 	}
 
