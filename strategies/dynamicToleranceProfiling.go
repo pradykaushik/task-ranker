@@ -252,6 +252,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 				cycles.timestamp))
 			fmt.Println("CPS.value = ", s.taskMetrics[taskId][cyclesPerSecondMetric])
 		}
+		s.previousPerfMetrics[taskId][perfEventNameCycles] = cycles
 	}
 
 	// calculating cycles per instruction (CPI).
