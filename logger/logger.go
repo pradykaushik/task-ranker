@@ -51,7 +51,16 @@ var logFilePrefix = ""
 // createTaskRankerLogFile creates the log file to which task ranker logs are persisted.
 func createTaskRankerLogFile(now time.Time) error {
 	var err error
-	filename := fmt.Sprintf("%s-%s_%v.log", logFilePrefix, taskRankerLogFilePrefix, now.UnixNano())
+	var formatString string
+	var args []interface{}
+	if logFilePrefix != "" {
+		formatString = "%s-%s_%v.log"
+		args = append(args, logFilePrefix, taskRankerLogFilePrefix, now.UnixNano())
+	} else {
+		formatString = "%s_%v.log"
+		args = append(args, taskRankerLogFilePrefix, now.UnixNano())
+	}
+	filename := fmt.Sprintf(formatString, args...)
 	taskRankerLogFile, err = os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, logFilePermissions)
 	if err != nil {
 		err = errors.Wrap(err, "failed to create task ranker operations log file")
@@ -62,7 +71,16 @@ func createTaskRankerLogFile(now time.Time) error {
 // createTaskRankingResultsLogFile creates the log file to which task ranking results are persisted.
 func createTaskRankingResultsLogFile(now time.Time) error {
 	var err error
-	filename := fmt.Sprintf("%s-%s_%v.log", logFilePrefix, taskRankingResultsLogFilePrefix, now.UnixNano())
+	var formatString string
+	var args []interface{}
+	if logFilePrefix != "" {
+		formatString = "%s-%s_%v.log"
+		args = append(args, logFilePrefix, taskRankerLogFilePrefix, now.UnixNano())
+	} else {
+		formatString = "%s_%v.log"
+		args = append(args, taskRankerLogFilePrefix, now.UnixNano())
+	}
+	filename := fmt.Sprintf(formatString, args...)
 	taskRankingResultsLogFile, err = os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, logFilePermissions)
 	if err != nil {
 		err = errors.Wrap(err, "failed to create task ranker log file")

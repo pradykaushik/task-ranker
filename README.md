@@ -161,6 +161,10 @@ There are [two types of logs](./logger/logger.go) as mentioned below.
 2. Task Ranking Results logs - These are the results of task ranking using one of task ranking strategies.
     These logs are written to a file named **_task\_ranking\_results\_\<timestamp\>.log_**. To simplify parsing
     these logs are written in JSON format.
+    
+You can also set a common prefix for all log files using the `WithLogFilePrefix()` option when configuring
+the Task Ranker. If a non-empty prefix is set, then a hyphen (-) will separate the set prefix and the 
+rest of the log filename.
 
 #### Disable Topics from Task-Ranker Logs
 By default, all topics are enabled for logging.
