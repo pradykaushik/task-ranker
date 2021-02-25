@@ -173,6 +173,14 @@ func WithSchedule(specString string) Option {
 	}
 }
 
+// WithLogFilePrefix returns a configuration option that sets the log file prefix to the one provided.
+func WithLogFilePrefix(prefix string) Option {
+	return func(*TaskRanker) error {
+		logger.WithLogFilePrefix(prefix)
+		return nil
+	}
+}
+
 func (tRanker *TaskRanker) Start() {
 	logger.WithFields(logrus.Fields{
 		topic.Stage.String(): "task-ranker",
