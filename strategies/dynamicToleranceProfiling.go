@@ -3,6 +3,7 @@ package strategies
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/pradykaushik/task-ranker/entities"
 	"github.com/pradykaushik/task-ranker/logger"
 	"github.com/pradykaushik/task-ranker/logger/topic"
 	"github.com/pradykaushik/task-ranker/query"
@@ -15,6 +16,8 @@ import (
 // Just logging different metrics.
 // Use it to monitor and log metrics pertaining to tasks running on one single host.
 type DynamicToleranceProfiler struct {
+	// receiver of the results of task ranking.
+	receiver TaskRanksReceiver
 	// labels used to filter the time series data fetched from prometheus.
 	labels []*query.LabelMatcher
 	// dedicatedLabelNameTaskID is the dedicated label to use when filtering metrics based on task id.
@@ -97,6 +100,7 @@ func (s *DynamicToleranceProfiler) SetPrometheusScrapeInterval(prometheusScrapeI
 
 // SetTaskRanksReceiver sets the receiver of the task ranking results.
 func (s *DynamicToleranceProfiler) SetTaskRanksReceiver(receiver TaskRanksReceiver) {
+	s.receiver = receiver
 }
 
 // Execute the strategy using the provided data.
@@ -246,16 +250,27 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 		}
 	}
 
+	// creating results to send back to receiver.
+	// just for dynamic-tolerance purpose, results will look like as shown below.
+	// {taskId => [{ID: <metric_name>, Weight: <value>} ... ]}
+	result := make(entities.RankedTasks)
 	var fields = logrus.Fields{topic.Metrics.String(): "dT-profiler-metrics"}
 	for taskId, metrics := range s.taskMetrics {
 		fields["taskId"] = taskId
+		// this line looks weird as hell. Note that it's just a hack and will not be pushed to master.
+		result[entities.Hostname(taskId)] = make([]entities.Task, len(metrics))
 		for header, value := range metrics {
 			fields[string(header)] = fmt.Sprintf("%.3f", value)
+			result[entities.Hostname(taskId)] = append(result[entities.Hostname(taskId)], entities.Task{
+				ID:     string(header),
+				Weight: float64(value),
+			})
 		}
 	}
 
 	if len(s.taskMetrics) > 0 {
 		logger.WithFields(fields).Log(logrus.InfoLevel)
+		s.receiver.Receive(result)
 	}
 }
 
