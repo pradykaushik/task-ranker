@@ -310,11 +310,11 @@ func (s DynamicToleranceProfiler) rate(
 func (s DynamicToleranceProfiler) GetMetrics() []string {
 	// TODO convert metrics to constants.
 	return []string{
-		string(cpuUsageSecondsTotalMetric),
 		string(cpuSharesMetric),
 		string(cpuQuotaMetric),
 		string(cpuPeriodMetric),
 		string(cpuCfsThrottledPeriodsTotalMetric),
+		string(cpuCfsThrottledSecondsTotalMetric),
 		string(cpuUsageSecondsTotalMetric),
 		string(cpuSchedStatRunQueueSecondsTotalMetric),
 		string(cpuSchedStatRunPeriodsTotalMetric),
