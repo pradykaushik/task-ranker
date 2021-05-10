@@ -120,6 +120,8 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	// Stores the number of instructions retired since the last cycle.
 	var nowInstructionsRetired = make(map[string]*perfDataPoint)
 	var nowCycles = make(map[string]*perfDataPoint)
+	// Boolean indicating whether a task has completed.
+	var terminatedTasks = make(map[string]bool)
 	for _, sample := range vector {
 		var taskId model.LabelValue
 		var ok bool
@@ -136,6 +138,12 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 		}
 
 		m := metric(sample.Metric["__name__"])
+		// If we find even a single spec metric, then we know for certain that the task has terminated.
+		// The reason we are having to do this is because metrics continue to persist for some time after
+		// 	a task has terminated. See https://github.com/google/cadvisor/issues/2812.
+		if (m == cpuSharesMetric) || (m == cpuQuotaMetric) || (m == cpuPeriodMetric) {
+			terminatedTasks[string(taskId)] = false
+		}
 		switch m {
 		case cpuSharesMetric, cpuQuotaMetric, cpuPeriodMetric,
 			cpuCfsThrottledPeriodsTotalMetric, cpuCfsThrottledSecondsTotalMetric,
@@ -181,6 +189,15 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 			// shouldn't be here.
 			// unwanted metric.
 		}
+	}
+
+	// Remove entries for terminated tasks.
+	for taskId := range terminatedTasks {
+		delete(nowTotalCpuUsage, taskId)
+		delete(nowInstructionsRetired, taskId)
+		delete(nowCycles, taskId)
+		delete(s.previousPerfMetrics, taskId)
+		delete(s.taskMetrics, taskId)
 	}
 
 	// calculate and record cpu utilization.
