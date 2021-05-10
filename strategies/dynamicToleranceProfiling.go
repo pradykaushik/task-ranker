@@ -121,7 +121,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	var nowInstructionsRetired = make(map[string]*perfDataPoint)
 	var nowCycles = make(map[string]*perfDataPoint)
 	// Boolean indicating whether a task has completed.
-	var terminatedTasks = make(map[string]bool)
+	var terminatedTasks = make(map[string]struct{})
 	for _, sample := range vector {
 		var taskId model.LabelValue
 		var ok bool
@@ -133,16 +133,20 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 			continue // ignore metric.
 		}
 
+		// Assuming that the task has terminated.
+		// Task will be removed from map if found to still be running.
+		terminatedTasks[string(taskId)] = struct{}{}
+
 		if _, ok = s.taskMetrics[string(taskId)]; !ok {
 			s.taskMetrics[string(taskId)] = make(map[metric]metricData)
 		}
 
 		m := metric(sample.Metric["__name__"])
-		// If we find even a single spec metric, then we know for certain that the task has terminated.
+		// If we find even a single spec metric, then we can conclude that the task has terminated.
 		// The reason we are having to do this is because metrics continue to persist for some time after
 		// 	a task has terminated. See https://github.com/google/cadvisor/issues/2812.
 		if (m == cpuSharesMetric) || (m == cpuQuotaMetric) || (m == cpuPeriodMetric) {
-			terminatedTasks[string(taskId)] = false
+			delete(terminatedTasks, string(taskId))
 		}
 		switch m {
 		case cpuSharesMetric, cpuQuotaMetric, cpuPeriodMetric,
