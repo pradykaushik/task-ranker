@@ -254,8 +254,8 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	// just for dynamic-tolerance purpose, results will look like as shown below.
 	// {taskId => [{ID: <metric_name>, Weight: <value>} ... ]}
 	result := make(entities.RankedTasks)
-	var fields = logrus.Fields{topic.Metrics.String(): "dT-profiler-metrics"}
 	for taskId, metrics := range s.taskMetrics {
+		var fields = logrus.Fields{topic.Metrics.String(): "dT-profiler-metrics"}
 		fields["taskId"] = taskId
 		// this line looks weird as hell. Note that it's just a hack and will not be pushed to master.
 		result[entities.Hostname(taskId)] = make([]entities.Task, len(metrics))
@@ -266,10 +266,10 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 				Weight: float64(value),
 			})
 		}
+		logger.WithFields(fields).Log(logrus.InfoLevel)
 	}
 
 	if len(s.taskMetrics) > 0 {
-		logger.WithFields(fields).Log(logrus.InfoLevel)
 		s.receiver.Receive(result)
 	}
 }
