@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	"math"
+	"strconv"
 	"time"
 )
 
@@ -278,7 +279,7 @@ func (s *DynamicToleranceProfiler) Execute(data model.Value) {
 	for taskId, metrics := range s.taskMetrics {
 		var fields = logrus.Fields{topic.Metrics.String(): "dT-profiler-metrics"}
 		fields["taskId"] = taskId
-		fields["timestamp"] = time.Now().UnixNano()
+		fields["timestamp"] = strconv.FormatInt(time.Now().UnixNano(), 10)
 		// this line looks weird as hell. Note that it's just a hack and will not be pushed to master.
 		result[entities.Hostname(taskId)] = make([]entities.Task, len(metrics))
 		for header, value := range metrics {
